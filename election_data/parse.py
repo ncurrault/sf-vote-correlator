@@ -1,23 +1,40 @@
 import json
 from collections import defaultdict
 import sys
-from pprint import pprint
 import os
-import tqdm
+import datetime
 
-# TODO args to adapt for every election, customize JSON file name
+# If tqdm (non-standard library for progress bars) isn't installed, just
+# don't show a progress bar
+try:
+    from tqdm import trange as range_func
+except ImportError:
+    range_func = range
 
-with open("CandidateManifest.json", "r") as f:
+RESULT_FORMAT_VERSION = "1.0"
+
+if len(sys.argv) < 3:
+    print("Usage: parse.py cvr_directory output_json", file=sys.stderr)
+    sys.exit(1)
+
+cvr_directory = sys.argv[1]
+output_filename = sys.argv[2]
+
+with open(os.path.join(sys.argv[1], "CandidateManifest.json"), "r") as f:
     candidates_json = json.load(f)
 
-with open("BallotTypeManifest.json", "r") as f:
-    ballot_types_json = json.load(f)
-
-with open("BallotTypeContestManifest.json", "r") as f:
-    contest_ballot_type_json = json.load(f)
-
-with open("ContestManifest.json", "r") as f:
+with open(os.path.join(sys.argv[1], "ContestManifest.json"), "r") as f:
     contests = json.load(f)
+
+with open(os.path.join(sys.argv[1], "ElectionEventManifest.json"), "r") as f:
+    election_event_manifest = json.load(f)
+
+# Gather election metadata for eventual output
+assert len(election_event_manifest["List"]) == 1
+election_details = election_event_manifest["List"][0]
+
+election_name = election_details["Description"]
+election_date = datetime.date.fromisoformat(election_details["ElectionDate"])
 
 contest_names = {x["Id"]: x["Description"] for x in contests["List"]}
 
@@ -29,16 +46,26 @@ skipped_contests = set(
 candidate_names = {x["Id"]: x["Description"] for x in candidates_json["List"]}
 
 # DATA STRUCTURE FOR CORRELATION LOOKUPS:
-# sorted tuple of contests -> parallel tuple describing vote -> number of ballots recorded
+# sorted tuple of contest IDs
+# -> parallel tuple of voted candidate on each contest -> ballot count
+#
+# Then, to get a correlation, look at all keys that are supersets of
+# some set of contests plus the contest in question, filter based on
+# vote tuples and sum ballot counts
+
+
+def cvr_file_path(idx):
+    return os.path.join(sys.argv[1], f"CvrExport_{idx}.json")
+
 
 cvr_export_max = 0
-while os.path.isfile(f"CvrExport_{cvr_export_max}.json"):
+while os.path.isfile(cvr_file_path(cvr_export_max)):
     cvr_export_max += 1
 
-result = defaultdict(lambda: defaultdict(int))
+correlations_result = defaultdict(lambda: defaultdict(int))
 
-for idx in tqdm.trange(cvr_export_max):
-    with open(f"CvrExport_{idx}.json", "r") as f:
+for idx in range_func(cvr_export_max):
+    with open(cvr_file_path(idx), "r") as f:
         votes_json = json.load(f)
 
     for session in votes_json["Sessions"]:
@@ -75,9 +102,30 @@ for idx in tqdm.trange(cvr_export_max):
         vote_tuple = tuple(vote_list)
         # vote_tuple = tuple(votes[c] for c in contests)
 
-        result[contests][vote_tuple] += 1
+        correlations_result[contests][vote_tuple] += 1
 
 
 # TODO ensure consistency with candidate/contest names
+# TODO run a few elections through and double check actual tallies against official results
 
-print({k: dict(v) for k, v in result.items()})
+# Transform result to JSON-compatible types: tuples aren't supported, so
+# simply stringify the array for each key
+
+correlations_for_json = {
+    json.dumps(list(contests)): {
+        json.dumps(list(vote)): tally for vote, tally in vote_totals.items()
+    }
+    for contests, vote_totals in correlations_result.items()
+}
+
+json_result = {
+    "version": RESULT_FORMAT_VERSION,
+    "correlationsResult": correlations_for_json,
+    "contestNames": contest_names,
+    "candidateNames": candidate_names,
+    "electionName": election_name,
+    "electionDate": election_date.isoformat(),
+}
+
+with open(output_filename, "w") as f:
+    json.dump(json_result, f)
