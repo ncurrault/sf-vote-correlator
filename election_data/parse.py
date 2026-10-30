@@ -11,7 +11,7 @@ try:
 except ImportError:
     range_func = range
 
-RESULT_FORMAT_VERSION = "1.0"
+RESULT_FORMAT_VERSION = "1.0.0"
 
 if len(sys.argv) < 3:
     print("Usage: parse.py cvr_directory output_json", file=sys.stderr)
@@ -43,7 +43,10 @@ skipped_contests = set(
     x["Id"] for x in contests["List"] if x["VoteFor"] != 1 or x["NumOfRanks"] != 0
 )
 
-candidate_names = {x["Id"]: x["Description"] for x in candidates_json["List"]}
+candidate_details = {
+    x["Id"]: {"name": x["Description"], "contestId": x["ContestId"]}
+    for x in candidates_json["List"]
+}
 
 # DATA STRUCTURE FOR CORRELATION LOOKUPS:
 # sorted tuple of contest IDs
@@ -122,7 +125,7 @@ json_result = {
     "version": RESULT_FORMAT_VERSION,
     "correlationsResult": correlations_for_json,
     "contestNames": contest_names,
-    "candidateNames": candidate_names,
+    "candidateDetails": candidate_details,
     "electionName": election_name,
     "electionDate": election_date.isoformat(),
 }
