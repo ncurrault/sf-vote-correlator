@@ -1,122 +1,124 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "./assets/vite.svg";
+import heroImg from "./assets/hero.png";
+import "./App.css";
+import React from "react";
+import {
+  Button,
+  Checkbox,
+  CheckboxButton,
+  CheckboxField,
+  Form,
+  Input,
+} from "react-aria-components";
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+interface ElectionJson {
+  version: 1;
+  correlationsResult: Record<string, Record<string, number>>;
+  contestNames: Record<number, string>;
+  candidateDetails: Record<
+    number,
+    {
+      name: string;
+      contestId: number;
+    }
+  >;
+  electionName: string;
+  electionDate: string;
 }
 
-export default App
+function ContestDisplay() {
+  return null;
+}
+
+function App() {
+  const [electionJson, setElectionJson] = React.useState<ElectionJson>();
+  const [sharedBallotSets, setSharedBallotSets] = React.useState<Set<number>[]>(
+    [],
+  );
+
+  React.useEffect(() => {
+    fetch("/elections/2026-06-02.json")
+      .then((res) => res.json())
+      .then((newElectionJson: ElectionJson) => {
+        setElectionJson(newElectionJson);
+
+        setSharedBallotSets(
+          Object.keys(newElectionJson.correlationsResult).map(
+            (contestsStr) => new Set(JSON.parse(contestsStr)),
+          ),
+        );
+        // TODO rework as useMemo
+      });
+  }, []); // TODO depend on election selected, handle tear down and reload
+
+  const candidatesByContest = React.useMemo(() => {
+    const result: Record<number, number[]> = {};
+    if (!electionJson) {
+      return result;
+    }
+    for (const [candidateId, { contestId }] of Object.entries(
+      electionJson.candidateDetails,
+    )) {
+      if (!result[contestId]) {
+        result[contestId] = [];
+      }
+      result[contestId].push(parseInt(candidateId));
+    }
+    return result;
+  }, [electionJson]);
+
+  const [selectedContests, setSelectedContests] = React.useState<number[]>([]);
+  const toggleContest = React.useCallback(
+    (contest: number) =>
+      setSelectedContests((existing) =>
+        existing.includes(contest)
+          ? existing.filter((x) => x !== contest)
+          : [...existing, contest],
+      ),
+    [setSelectedContests],
+  );
+
+  const possibleContests = React.useMemo(() => {
+    const validOtherContests = new Set<number>();
+    for (const sharedBallotSet of sharedBallotSets) {
+      if (!selectedContests.every((contest) => sharedBallotSet.has(contest))) {
+        continue; // some selected contest isn't on this ballot card; we get no added correlations
+      }
+      for (const otherContest of sharedBallotSet) {
+        if (!selectedContests.includes(otherContest)) {
+          validOtherContests.add(otherContest);
+        }
+      }
+    }
+    return validOtherContests;
+  }, [selectedContests, sharedBallotSets]);
+
+  // TODO we need candidate/contest correspondence for displaying the UI
+
+  return (
+    electionJson && (
+      <div className="container-fluid p-0">
+        <div className="row g-0 vh-100">
+          {[...possibleContests].map((contestId) => (
+            <li>
+              {electionJson.contestNames[contestId]}
+              <ul>
+                {candidatesByContest[contestId].map((candidateId) => (
+                  <CheckboxField>
+                    <CheckboxButton>
+                      {electionJson.candidateDetails[candidateId].name}
+                    </CheckboxButton>
+                  </CheckboxField>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </div>
+      </div>
+    )
+  );
+}
+
+export default App;
