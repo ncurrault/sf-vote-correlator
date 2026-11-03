@@ -34,24 +34,23 @@ function ContestDisplay() {
 
 function App() {
   const [electionJson, setElectionJson] = React.useState<ElectionJson>();
-  const [sharedBallotSets, setSharedBallotSets] = React.useState<Set<number>[]>(
-    [],
-  );
 
   React.useEffect(() => {
     fetch("/elections/2026-06-02.json")
       .then((res) => res.json())
       .then((newElectionJson: ElectionJson) => {
         setElectionJson(newElectionJson);
-
-        setSharedBallotSets(
-          Object.keys(newElectionJson.correlationsResult).map(
-            (contestsStr) => new Set(JSON.parse(contestsStr)),
-          ),
-        );
-        // TODO rework as useMemo
       });
   }, []); // TODO depend on election selected, handle tear down and reload
+
+  const sharedBallotSets = React.useMemo(
+    () =>
+      electionJson &&
+      Object.keys(electionJson.correlationsResult).map(
+        (contestsStr) => new Set(JSON.parse(contestsStr)),
+      ),
+    [electionJson],
+  );
 
   const candidatesByContest = React.useMemo(() => {
     const result: Record<number, number[]> = {};
@@ -82,7 +81,7 @@ function App() {
 
   const possibleContests = React.useMemo(() => {
     const validOtherContests = new Set<number>();
-    for (const sharedBallotSet of sharedBallotSets) {
+    for (const sharedBallotSet of sharedBallotSets ?? []) {
       if (!selectedContests.every((contest) => sharedBallotSet.has(contest))) {
         continue; // some selected contest isn't on this ballot card; we get no added correlations
       }
@@ -95,29 +94,39 @@ function App() {
     return validOtherContests;
   }, [selectedContests, sharedBallotSets]);
 
-  // TODO we need candidate/contest correspondence for displaying the UI
-
   return (
-    electionJson && (
-      <div className="container-fluid p-0">
-        <div className="row g-0 vh-100">
-          {[...possibleContests].map((contestId) => (
-            <li>
-              {electionJson.contestNames[contestId]}
-              <ul>
-                {candidatesByContest[contestId].map((candidateId) => (
-                  <CheckboxField>
-                    <CheckboxButton>
-                      {electionJson.candidateDetails[candidateId].name}
-                    </CheckboxButton>
-                  </CheckboxField>
+    <div className="app-shell container-fluid p-0">
+      <div className="row g-0 vh-100">
+        <aside className="col-12 col-md-4 col-lg-3 border-end bg-white exploration-sidebar px-3 py-4">
+          <div className="d-flex align-items-center mb-4 gap-2">
+            <i className="bi bi-intersect fs-2" />
+            <h2 className="h5 mb-1">SF Elections Correlator</h2>
+          </div>
+        </aside>
+
+        <main className="col-12 col-md-8 col-lg-9 d-flex flex-column exploration-panel px-3 py-4">
+          <section className="exploration-window flex-grow-1 mb-4">
+            <div className="recipe-list border rounded-3 h-100 p-3 bg-light">
+              {electionJson &&
+                [...possibleContests].map((contestId) => (
+                  <li>
+                    {electionJson.contestNames[contestId]}
+                    <ul>
+                      {candidatesByContest[contestId].map((candidateId) => (
+                        <CheckboxField>
+                          <CheckboxButton>
+                            {electionJson.candidateDetails[candidateId].name}
+                          </CheckboxButton>
+                        </CheckboxField>
+                      ))}
+                    </ul>
+                  </li>
                 ))}
-              </ul>
-            </li>
-          ))}
-        </div>
+            </div>
+          </section>
+        </main>
       </div>
-    )
+    </div>
   );
 }
 
