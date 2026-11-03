@@ -47,7 +47,7 @@ function App() {
     () =>
       electionJson &&
       Object.keys(electionJson.correlationsResult).map(
-        (contestsStr) => new Set(JSON.parse(contestsStr)),
+        (contestsStr) => new Set<number>(JSON.parse(contestsStr)),
       ),
     [electionJson],
   );
@@ -68,15 +68,32 @@ function App() {
     return result;
   }, [electionJson]);
 
-  const [selectedContests, setSelectedContests] = React.useState<number[]>([]);
-  const toggleContest = React.useCallback(
-    (contest: number) =>
-      setSelectedContests((existing) =>
-        existing.includes(contest)
-          ? existing.filter((x) => x !== contest)
-          : [...existing, contest],
+  const [selectedCandidates, setSelectedCandidates] = React.useState<number[]>(
+    [],
+  );
+
+  const toggleCandidate = React.useCallback(
+    (candidate: number) =>
+      setSelectedCandidates((existing) =>
+        existing.includes(candidate)
+          ? existing.filter((x) => x !== candidate)
+          : [...existing, candidate],
       ),
-    [setSelectedContests],
+    [setSelectedCandidates],
+  );
+
+  const selectedContests = React.useMemo(
+    () => [
+      ...new Set<number>(
+        selectedCandidates
+          .map(
+            (candidate) => electionJson?.candidateDetails[candidate].contestId,
+          )
+          .filter((x): x is number => x != null),
+        // TODO print warning if unknown candidate
+      ),
+    ],
+    [electionJson, selectedCandidates],
   );
 
   const possibleContests = React.useMemo(() => {
