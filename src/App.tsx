@@ -12,6 +12,7 @@ import {
   Form,
   Input,
 } from "react-aria-components";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 interface ElectionJson {
   version: 1;
@@ -112,37 +113,33 @@ function App() {
   }, [selectedContests, sharedBallotSets]);
 
   return (
-    <div className="app-shell container-fluid p-0">
-      <div className="row g-0 vh-100">
-        <aside className="col-12 col-md-4 col-lg-3 border-end bg-white exploration-sidebar px-3 py-4">
-          <div className="d-flex align-items-center mb-4 gap-2">
-            <i className="bi bi-intersect fs-2" />
-            <h2 className="h5 mb-1">SF Elections Correlator</h2>
-          </div>
-        </aside>
+    <div className="app">
+      <header className="app-header">
+        <h1>
+          <i className="bi bi-intersect" style={{ marginRight: "10px" }} />
+          SF Elections Correlator
+        </h1>
+      </header>
 
-        <main className="col-12 col-md-8 col-lg-9 d-flex flex-column exploration-panel px-3 py-4">
-          <section className="exploration-window flex-grow-1 mb-4">
-            <div className="recipe-list border rounded-3 h-100 p-3 bg-light">
-              {electionJson &&
-                [...possibleContests].map((contestId) => (
-                  <li>
-                    {electionJson.contestNames[contestId]}
-                    <ul>
-                      {candidatesByContest[contestId].map((candidateId) => (
-                        <CheckboxField>
-                          <CheckboxButton>
-                            {electionJson.candidateDetails[candidateId].name}
-                          </CheckboxButton>
-                        </CheckboxField>
-                      ))}
-                    </ul>
-                  </li>
+      <main className="contest-list">
+        {electionJson &&
+          [...possibleContests].map((contestId) => (
+            <section key={contestId} className="contest">
+              <h2 className="contest-name">
+                {electionJson.contestNames[contestId]}
+              </h2>
+              <div className="candidates">
+                {candidatesByContest[contestId].map((candidateId) => (
+                  <CheckboxField key={candidateId} className="candidate">
+                    <CheckboxButton className="candidate-button">
+                      {electionJson.candidateDetails[candidateId].name}
+                    </CheckboxButton>
+                  </CheckboxField>
                 ))}
-            </div>
-          </section>
-        </main>
-      </div>
+              </div>
+            </section>
+          ))}
+      </main>
     </div>
   );
 }

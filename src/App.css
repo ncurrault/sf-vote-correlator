@@ -1,41 +1,96 @@
-.app-shell {
-  background: #f8f9fa;
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px;
 }
 
-.exploration-sidebar {
-  height: 100%;
-  overflow: hidden;
-  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.05);
+.app-header h1 {
+  font-size: 28px;
+  letter-spacing: -0.5px;
+  margin: 0 0 24px;
 }
 
-.exploration-list {
-  max-height: calc(100vh - 10rem);
-  overflow-y: auto;
+.contest-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  align-items: start;
 }
 
+.contest {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
 
-/* TODO separate component? */
+.contest-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
 
-.exploration-panel {
-  height: 100%;
+/* With nothing checked, the contest matches any candidate */
+.contest:not(:has(.candidate[data-selected])) .contest-name::after {
+  content: "Any";
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.contest:has(.candidate[data-selected]) {
+  border-color: var(--accent-border);
+}
+
+.candidates {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 2px;
 }
 
-.exploration-window {
-  min-height: 240px;
-}
-
-.recipe-list {
+.candidate-button {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-height: 240px;
-  max-height: calc(100vh - 10rem);
-  overflow-y: auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 15px;
+  cursor: pointer;
 }
 
-.exploration-form {
-  gap: 0.75rem;
+.candidate-button::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--text);
+  border-radius: 3px;
+}
+
+.candidate-button[data-hovered] {
+  background: var(--code-bg);
+}
+
+.candidate-button[data-selected] {
+  color: var(--text-h);
+}
+
+.candidate-button[data-selected]::before {
+  border-color: var(--accent);
+  background: var(--accent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E")
+    center / 100% no-repeat;
+}
+
+.candidate-button[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
