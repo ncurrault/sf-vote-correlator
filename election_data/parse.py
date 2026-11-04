@@ -11,7 +11,7 @@ try:
 except ImportError:
     range_func = range
 
-RESULT_FORMAT_VERSION = "1.0.0"
+RESULT_FORMAT_VERSION = "1.0.2"
 
 if len(sys.argv) < 3:
     print("Usage: parse.py cvr_directory output_json", file=sys.stderr)
@@ -36,16 +36,22 @@ election_details = election_event_manifest["List"][0]
 election_name = election_details["Description"]
 election_date = datetime.date.fromisoformat(election_details["ElectionDate"])
 
-contest_names = {x["Id"]: x["Description"] for x in contests["List"]}
 
 # TODO just single-choice for now (props, single-candidate offices), skipping multi-candidate (e.g. CCSF board) and ranked-choice
 skipped_contests = set(
     x["Id"] for x in contests["List"] if x["VoteFor"] != 1 or x["NumOfRanks"] != 0
 )
 
+contest_names = {
+    x["Id"]: x["Description"]
+    for x in contests["List"]
+    if x["Id"] not in skipped_contests
+}
+
 candidate_details = {
     x["Id"]: {"name": x["Description"], "contestId": x["ContestId"]}
     for x in candidates_json["List"]
+    if x["ContestId"] not in skipped_contests
 }
 
 # DATA STRUCTURE FOR CORRELATION LOOKUPS:
