@@ -42,14 +42,18 @@ skipped_contests = set(
     x["Id"] for x in contests["List"] if x["VoteFor"] != 1 or x["NumOfRanks"] != 0
 )
 
-contest_names = {
-    x["Id"]: x["Description"]
+contest_details = {
+    x["Id"]: {"name": x["Description"]}
     for x in contests["List"]
     if x["Id"] not in skipped_contests
 }
 
 candidate_details = {
-    x["Id"]: {"name": x["Description"], "contestId": x["ContestId"]}
+    x["Id"]: {
+        "name": x["Description"],
+        "contestId": x["ContestId"],
+        "isWriteIn": x["Type"] == "WriteIn",
+    }
     for x in candidates_json["List"]
     if x["ContestId"] not in skipped_contests
 }
@@ -72,6 +76,7 @@ while os.path.isfile(cvr_file_path(cvr_export_max)):
     cvr_export_max += 1
 
 correlations_result = defaultdict(lambda: defaultdict(int))
+vote_tallies = defaultdict(lambda: defaultdict(int))
 
 for idx in range_func(cvr_export_max):
     with open(cvr_file_path(idx), "r") as f:
@@ -91,7 +96,17 @@ for idx in range_func(cvr_export_max):
             if contest["Id"] not in skipped_contests
         }
 
+        for contest, v in votes.items():
+            if v is None:
+                continue
+
+            assert (
+                len(v) == 1
+            )  # overvotes and undervotes should already be captured as None
+            vote_tallies[contest][v[0]] += 1
+
         # any cards with exactly one contest (e.g. EDU voters) can be skipped
+        # for correlation-data purposes
         if (len(votes)) < 2:
             continue
 
@@ -117,6 +132,28 @@ for idx in range_func(cvr_export_max):
 # TODO ensure consistency with candidate/contest names
 # TODO run a few elections through and double check actual tallies against official results
 
+candidates_by_contest = defaultdict(list)
+for candidate in candidate_details:
+    candidates_by_contest[candidate_details[candidate]["contestId"]].append(candidate)
+
+for contest in contest_details.keys():
+    print(contest_details[contest]["name"])
+    candidate_order = sorted(
+        candidates_by_contest[contest],
+        key=lambda candidate: (
+            1
+            if candidate_details[candidate]["isWriteIn"]
+            else -vote_tallies[contest][candidate]
+        ),
+    )
+    contest_details[contest]["candidateOrder"] = candidate_order
+    for candidate in candidate_order:
+        print(
+            f"\t{candidate_details[candidate]["name"]}\t{vote_tallies[contest][candidate]:,}",
+        )
+    print()
+
+
 # Transform result to JSON-compatible types: tuples aren't supported, so
 # simply stringify the array for each key
 
@@ -130,10 +167,11 @@ correlations_for_json = {
 json_result = {
     "version": RESULT_FORMAT_VERSION,
     "correlationsResult": correlations_for_json,
-    "contestNames": contest_names,
+    "contestNames": contest_details,
     "candidateDetails": candidate_details,
     "electionName": election_name,
     "electionDate": election_date.isoformat(),
+    "contestOrder": list(contest_details.keys()),
 }
 
 with open(output_filename, "w") as f:
