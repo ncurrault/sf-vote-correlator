@@ -112,6 +112,8 @@ function App() {
     return validOtherContests;
   }, [selectedContests, sharedBallotSets]);
 
+  // TODO state to proceed within each contest
+
   return (
     <div className="app">
       <header className="app-header">
@@ -122,6 +124,14 @@ function App() {
       </header>
 
       <main className="contest-list">
+        <h2>Step one: select contests</h2>
+        <p>
+          Select the contests within which you are interested in analyzing
+          correlations. Note that you can only select contests which appear
+          together on at least one ballot cared. Your exploration will be
+          limited to voters who had all selected contests together on a single
+          ballot card.
+        </p>
         {electionJson &&
           [...possibleContests].map((contestId) => (
             <section key={contestId} className="contest">
