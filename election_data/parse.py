@@ -11,7 +11,7 @@ try:
 except ImportError:
     range_func = range
 
-RESULT_FORMAT_VERSION = "1.0.2"
+RESULT_FORMAT_VERSION = "1.0.3"
 
 if len(sys.argv) < 3:
     print("Usage: parse.py cvr_directory output_json", file=sys.stderr)
@@ -85,13 +85,20 @@ for idx in range_func(cvr_export_max):
     for session in votes_json["Sessions"]:
         # TODO use session["CountingGroupId"] to correlate in-person vs VBM info?
 
+        # Some overvotes or scanning issues are later adjudicated to ensure a
+        # correct result. For example, if a voter crosses out their vote and
+        # changes it, making their intent clear on the ballot.
+        session_portion_used = (
+            session["Modified"] if "Modified" in session else session["Original"]
+        )
+
         votes = {
             contest["Id"]: (
                 [mark["CandidateId"] for mark in contest["Marks"] if mark["IsVote"]]
                 if contest["Overvotes"] == 0 and contest["Undervotes"] == 0
                 else None
             )
-            for card in session["Original"]["Cards"]
+            for card in session_portion_used["Cards"]
             for contest in card["Contests"]
             if contest["Id"] not in skipped_contests
         }
