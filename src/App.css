@@ -94,3 +94,10 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+.expand-candidates-btn {
+  width: 100%;
+  display: 'flex';
+  align-items: center;
+  margin-top: 5px;
+}

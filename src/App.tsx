@@ -15,9 +15,9 @@ import {
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 interface ElectionJson {
-  version: 1;
+  version: "1.0.3";
   correlationsResult: Record<string, Record<string, number>>;
-  contestNames: Record<number, string>;
+  contestDetails: Record<number, { name: string; candidateOrder: number[] }>;
   candidateDetails: Record<
     number,
     {
@@ -27,6 +27,7 @@ interface ElectionJson {
   >;
   electionName: string;
   electionDate: string;
+  contestOrder: number[];
 }
 
 function ContestDisplay() {
@@ -52,22 +53,6 @@ function App() {
       ),
     [electionJson],
   );
-
-  const candidatesByContest = React.useMemo(() => {
-    const result: Record<number, number[]> = {};
-    if (!electionJson) {
-      return result;
-    }
-    for (const [candidateId, { contestId }] of Object.entries(
-      electionJson.candidateDetails,
-    )) {
-      if (!result[contestId]) {
-        result[contestId] = [];
-      }
-      result[contestId].push(parseInt(candidateId));
-    }
-    return result;
-  }, [electionJson]);
 
   const [selectedCandidates, setSelectedCandidates] = React.useState<number[]>(
     [],
@@ -112,7 +97,16 @@ function App() {
     return validOtherContests;
   }, [selectedContests, sharedBallotSets]);
 
-  // TODO state to proceed within each contest
+  const [expandedContests, setExpandedContests] = React.useState<number[]>([]);
+  const toggleContest = React.useCallback(
+    (contestId: number) =>
+      setExpandedContests((currExpanded) =>
+        currExpanded.includes(contestId)
+          ? currExpanded.filter((x) => x !== contestId)
+          : [...currExpanded, contestId],
+      ),
+    [setExpandedContests],
+  );
 
   return (
     <div className="app">
@@ -133,22 +127,55 @@ function App() {
           ballot card.
         </p>
         {electionJson &&
-          [...possibleContests].map((contestId) => (
-            <section key={contestId} className="contest">
-              <h2 className="contest-name">
-                {electionJson.contestNames[contestId]}
-              </h2>
-              <div className="candidates">
-                {candidatesByContest[contestId].map((candidateId) => (
-                  <CheckboxField key={candidateId} className="candidate">
-                    <CheckboxButton className="candidate-button">
-                      {electionJson.candidateDetails[candidateId].name}
-                    </CheckboxButton>
-                  </CheckboxField>
-                ))}
-              </div>
-            </section>
-          ))}
+          [...possibleContests].map((contestId) => {
+            const isExpanded = expandedContests.includes(contestId);
+            const allCandidates =
+              electionJson.contestDetails[contestId].candidateOrder;
+            const displayedCandidates = isExpanded
+              ? allCandidates
+              : [
+                  ...allCandidates.slice(0, 4),
+                  ...allCandidates
+                    .slice(4)
+                    .filter((cand) => selectedCandidates.includes(cand)),
+                ];
+
+            return (
+              <section key={contestId} className="contest">
+                <h2 className="contest-name">
+                  {electionJson.contestDetails[contestId].name}
+                </h2>
+                <div className="candidates">
+                  {displayedCandidates.map((candidateId) => (
+                    <CheckboxField
+                      key={candidateId}
+                      className="candidate"
+                      onChange={() => toggleCandidate(candidateId)}
+                      isSelected={selectedCandidates.includes(candidateId)}
+                    >
+                      <CheckboxButton className="candidate-button">
+                        {electionJson.candidateDetails[candidateId].name}
+                      </CheckboxButton>
+                    </CheckboxField>
+                  ))}
+                </div>
+                {allCandidates.length > 4 && (
+                  <button
+                    className="expand-candidates-btn"
+                    onClick={() => toggleContest(contestId)}
+                  >
+                    <i
+                      className={`bi ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`}
+                      style={{ marginRight: "5px" }}
+                    />
+                    {isExpanded
+                      ? "Hide low-ranking candidates"
+                      : "Show all candidates"}
+                  </button>
+                )}
+              </section>
+            );
+          })}
       </main>
     </div>
   );
