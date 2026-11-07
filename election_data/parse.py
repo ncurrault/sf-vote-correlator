@@ -136,15 +136,12 @@ for idx in range_func(cvr_export_max):
         correlations_result[contests][vote_tuple] += 1
 
 
-# TODO ensure consistency with candidate/contest names
-# TODO run a few elections through and double check actual tallies against official results
-
 candidates_by_contest = defaultdict(list)
 for candidate in candidate_details:
     candidates_by_contest[candidate_details[candidate]["contestId"]].append(candidate)
 
 for contest in contest_details.keys():
-    print(contest_details[contest]["name"])
+    print(contest_details[contest]["name"], contest)
     candidate_order = sorted(
         candidates_by_contest[contest],
         key=lambda candidate: (
