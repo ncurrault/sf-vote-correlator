@@ -141,7 +141,7 @@ for candidate in candidate_details:
     candidates_by_contest[candidate_details[candidate]["contestId"]].append(candidate)
 
 for contest in contest_details.keys():
-    print(contest_details[contest]["name"], contest)
+    print(contest_details[contest]["name"], f"(ID={contest})")
     candidate_order = sorted(
         candidates_by_contest[contest],
         key=lambda candidate: (
@@ -153,7 +153,7 @@ for contest in contest_details.keys():
     contest_details[contest]["candidateOrder"] = candidate_order
     for candidate in candidate_order:
         print(
-            f"\t{candidate_details[candidate]["name"]}\t{vote_tallies[contest][candidate]:,}",
+            f"\t{candidate_details[candidate]["name"]} (ID={candidate})\t{vote_tallies[contest][candidate]:,}",
         )
     print()
 
