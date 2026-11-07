@@ -11,7 +11,7 @@ try:
 except ImportError:
     range_func = range
 
-RESULT_FORMAT_VERSION = "1.0.3"
+RESULT_FORMAT_VERSION = "1.0.4"
 
 if len(sys.argv) < 3:
     print("Usage: parse.py cvr_directory output_json", file=sys.stderr)
@@ -171,7 +171,7 @@ correlations_for_json = {
 json_result = {
     "version": RESULT_FORMAT_VERSION,
     "correlationsResult": correlations_for_json,
-    "contestNames": contest_details,
+    "contestDetails": contest_details,
     "candidateDetails": candidate_details,
     "electionName": election_name,
     "electionDate": election_date.isoformat(),
