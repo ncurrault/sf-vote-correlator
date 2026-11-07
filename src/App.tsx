@@ -30,12 +30,16 @@ interface ElectionJson {
   contestOrder: number[];
 }
 
-function ContestDisplay() {
-  return null;
+enum DisplayMode {
+  SELECT_CONTESTS = "SELECT_CONTESTS",
+  SELECT_CANDIDATES = "SELECT_CANDIDATES",
 }
 
 function App() {
   const [electionJson, setElectionJson] = React.useState<ElectionJson>();
+  const [mode, setMode] = React.useState<DisplayMode>(
+    DisplayMode.SELECT_CONTESTS,
+  );
 
   React.useEffect(() => {
     fetch("/elections/2026-06-02.json")
@@ -45,6 +49,7 @@ function App() {
       });
   }, []); // TODO depend on election selected, handle tear down and reload
 
+  // CONTEST SELECTION LOGIC
   const sharedBallotSets = React.useMemo(
     () =>
       electionJson &&
@@ -54,32 +59,15 @@ function App() {
     [electionJson],
   );
 
-  const [selectedCandidates, setSelectedCandidates] = React.useState<number[]>(
-    [],
-  );
-
-  const toggleCandidate = React.useCallback(
-    (candidate: number) =>
-      setSelectedCandidates((existing) =>
-        existing.includes(candidate)
-          ? existing.filter((x) => x !== candidate)
-          : [...existing, candidate],
+  const [selectedContests, setSelectedContests] = React.useState<number[]>([]);
+  const toggleContestSelected = React.useCallback(
+    (contestId: number) =>
+      setSelectedContests((currSelected) =>
+        currSelected.includes(contestId)
+          ? currSelected.filter((x) => x !== contestId)
+          : [...currSelected, contestId],
       ),
-    [setSelectedCandidates],
-  );
-
-  const selectedContests = React.useMemo(
-    () => [
-      ...new Set<number>(
-        selectedCandidates
-          .map(
-            (candidate) => electionJson?.candidateDetails[candidate].contestId,
-          )
-          .filter((x): x is number => x != null),
-        // TODO print warning if unknown candidate
-      ),
-    ],
-    [electionJson, selectedCandidates],
+    [setSelectedContests],
   );
 
   const possibleContests = React.useMemo(() => {
@@ -96,9 +84,27 @@ function App() {
     }
     return validOtherContests;
   }, [selectedContests, sharedBallotSets]);
+  console.log({
+    sharedBallotSetsArr: sharedBallotSets && [...sharedBallotSets],
+    selectedContests,
+    possibleContestsArr: [...possibleContests],
+  });
 
+  // CANDIDATE FILTERING LOGIC
+  const [selectedCandidates, setSelectedCandidates] = React.useState<number[]>(
+    [],
+  );
+  const toggleCandidate = React.useCallback(
+    (candidate: number) =>
+      setSelectedCandidates((existing) =>
+        existing.includes(candidate)
+          ? existing.filter((x) => x !== candidate)
+          : [...existing, candidate],
+      ),
+    [setSelectedCandidates],
+  );
   const [expandedContests, setExpandedContests] = React.useState<number[]>([]);
-  const toggleContest = React.useCallback(
+  const toggleContestExpanded = React.useCallback(
     (contestId: number) =>
       setExpandedContests((currExpanded) =>
         currExpanded.includes(contestId)
@@ -117,17 +123,35 @@ function App() {
         </h1>
       </header>
 
-      <main className="contest-list">
-        <h2>Step one: select contests</h2>
-        <p>
-          Select the contests within which you are interested in analyzing
-          correlations. Note that you can only select contests which appear
-          together on at least one ballot cared. Your exploration will be
-          limited to voters who had all selected contests together on a single
-          ballot card.
-        </p>
-        {electionJson &&
-          [...possibleContests].map((contestId) => {
+      {electionJson && mode === DisplayMode.SELECT_CONTESTS && (
+        <main>
+          <h2>Step one: select contests</h2>
+          <p>
+            Select the contests among which you are interested in analyzing
+            correlations. Note that you can only select contests which appear
+            together on at least one ballot cared. Your exploration will be
+            limited to voters who had all selected contests together on a single
+            ballot card.
+          </p>
+          {electionJson.contestOrder.map((contestId) => (
+            <CheckboxField
+              key={contestId}
+              className="candidate"
+              onChange={() => toggleContestSelected(contestId)}
+              isSelected={selectedContests.includes(contestId)}
+              isDisabled={!possibleContests.has(contestId)}
+            >
+              <CheckboxButton className="candidate-button">
+                {electionJson.contestDetails[contestId].name}
+              </CheckboxButton>
+            </CheckboxField>
+          ))}
+        </main>
+      )}
+
+      {electionJson && mode === DisplayMode.SELECT_CANDIDATES && (
+        <main className="contest-list">
+          {[...selectedContests].map((contestId) => {
             const isExpanded = expandedContests.includes(contestId);
             const allCandidates =
               electionJson.contestDetails[contestId].candidateOrder;
@@ -162,7 +186,7 @@ function App() {
                 {allCandidates.length > 4 && (
                   <button
                     className="expand-candidates-btn"
-                    onClick={() => toggleContest(contestId)}
+                    onClick={() => toggleContestExpanded(contestId)}
                   >
                     <i
                       className={`bi ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`}
@@ -176,7 +200,8 @@ function App() {
               </section>
             );
           })}
-      </main>
+        </main>
+      )}
     </div>
   );
 }
