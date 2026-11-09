@@ -30,8 +30,41 @@
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.contest-select-advance-box .bi {
+.contest-select-advance-box > .bi {
   font-size: 36px;
+}
+
+.advance-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  /* --bg stays legible against --accent in both light and dark themes */
+  color: var(--bg);
+  background: var(--accent);
+  cursor: pointer;
+  transition:
+    filter 120ms,
+    box-shadow 120ms;
+}
+
+.advance-button[data-hovered] {
+  filter: brightness(1.08);
+  box-shadow: var(--shadow);
+}
+
+.advance-button[data-pressed] {
+  filter: brightness(0.92);
+  box-shadow: none;
+}
+
+.advance-button[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .contest-list {
@@ -117,6 +150,16 @@
 .candidate-button[data-focus-visible] {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.candidate-button[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.candidate-button[data-disabled]::before {
+  border-color: var(--border);
+  background: var(--border);
 }
 
 .expand-candidates-btn {

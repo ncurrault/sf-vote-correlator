@@ -176,7 +176,7 @@ function App() {
             ))}
           </section>
 
-          {selectedContests.length > 0 && (
+          {selectedContests.length >= 2 && (
             <section className="contest-select-advance-box">
               {currentBallotCount < 5000 ? (
                 <>
@@ -197,9 +197,13 @@ function App() {
                   </p>
                 </>
               )}
-              <button onClick={() => setMode(DisplayMode.SELECT_CANDIDATES)}>
+              <Button
+                className="advance-button"
+                onPress={() => setMode(DisplayMode.SELECT_CANDIDATES)}
+              >
                 Explore Correlations
-              </button>
+                <i className="bi bi-arrow-right" />
+              </Button>
             </section>
           )}
         </main>
