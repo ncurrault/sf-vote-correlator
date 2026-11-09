@@ -18,6 +18,7 @@ interface ElectionJson {
   version: "1.0.3";
   correlationsResult: Record<string, Record<string, number>>;
   contestDetails: Record<number, { name: string; candidateOrder: number[] }>;
+  contestOverlapCount: Record<string, number>;
   candidateDetails: Record<
     number,
     {
@@ -28,6 +29,10 @@ interface ElectionJson {
   electionName: string;
   electionDate: string;
   contestOrder: number[];
+  redactedScans: {
+    precinct: string;
+    imageMask: string;
+  }[];
 }
 
 enum DisplayMode {
@@ -50,15 +55,6 @@ function App() {
   }, []); // TODO depend on election selected, handle tear down and reload
 
   // CONTEST SELECTION LOGIC
-  const sharedBallotSets = React.useMemo(
-    () =>
-      electionJson &&
-      Object.keys(electionJson.correlationsResult).map(
-        (contestsStr) => new Set<number>(JSON.parse(contestsStr)),
-      ),
-    [electionJson],
-  );
-
   const [selectedContests, setSelectedContests] = React.useState<number[]>([]);
   const toggleContestSelected = React.useCallback(
     (contestId: number) =>
@@ -70,25 +66,51 @@ function App() {
     [setSelectedContests],
   );
 
-  const possibleContests = React.useMemo(() => {
-    const validOtherContests = new Set<number>();
-    for (const sharedBallotSet of sharedBallotSets ?? []) {
-      if (!selectedContests.every((contest) => sharedBallotSet.has(contest))) {
+  const sharedBallotCounts: {
+    contests: Set<number>;
+    count: number;
+  }[] = React.useMemo(
+    () =>
+      electionJson
+        ? Object.entries(electionJson.contestOverlapCount).map(
+            ([contestsStr, count]) => ({
+              contests: new Set<number>(JSON.parse(contestsStr)),
+              count,
+            }),
+          )
+        : [],
+    [electionJson],
+  );
+
+  // SF has a few contests that nobody can vote in due to misalignments in
+  // county and district lines. Hide these races for simplicity.
+  const displayedContests = React.useMemo(
+    () =>
+      electionJson
+        ? electionJson.contestOrder.filter((contest) =>
+            sharedBallotCounts.some(({ contests }) => contests.has(contest)),
+          )
+        : [],
+    [electionJson],
+  );
+
+  const { possibleContests, currentBallotCount } = React.useMemo(() => {
+    const possibleContests = new Set<number>();
+    let currentBallotCount = 0;
+    for (const { contests, count } of sharedBallotCounts ?? []) {
+      if (selectedContests.every((contest) => contests.has(contest))) {
+        currentBallotCount += count;
+      } else {
         continue; // some selected contest isn't on this ballot card; we get no added correlations
       }
-      for (const otherContest of sharedBallotSet) {
+      for (const otherContest of contests) {
         if (!selectedContests.includes(otherContest)) {
-          validOtherContests.add(otherContest);
+          possibleContests.add(otherContest);
         }
       }
     }
-    return validOtherContests;
-  }, [selectedContests, sharedBallotSets]);
-  console.log({
-    sharedBallotSetsArr: sharedBallotSets && [...sharedBallotSets],
-    selectedContests,
-    possibleContestsArr: [...possibleContests],
-  });
+    return { possibleContests, currentBallotCount, selectedContests };
+  }, [sharedBallotCounts, selectedContests]);
 
   // CANDIDATE FILTERING LOGIC
   const [selectedCandidates, setSelectedCandidates] = React.useState<number[]>(
@@ -124,28 +146,62 @@ function App() {
       </header>
 
       {electionJson && mode === DisplayMode.SELECT_CONTESTS && (
-        <main>
-          <h2>Step one: select contests</h2>
-          <p>
-            Select the contests among which you are interested in analyzing
-            correlations. Note that you can only select contests which appear
-            together on at least one ballot cared. Your exploration will be
-            limited to voters who had all selected contests together on a single
-            ballot card.
-          </p>
-          {electionJson.contestOrder.map((contestId) => (
-            <CheckboxField
-              key={contestId}
-              className="candidate"
-              onChange={() => toggleContestSelected(contestId)}
-              isSelected={selectedContests.includes(contestId)}
-              isDisabled={!possibleContests.has(contestId)}
-            >
-              <CheckboxButton className="candidate-button">
-                {electionJson.contestDetails[contestId].name}
-              </CheckboxButton>
-            </CheckboxField>
-          ))}
+        <main className="contest-select">
+          <section className="contest-select-explanation">
+            <h2>Step one: select contests</h2>
+            <p>
+              Select the contests among which you are interested in analyzing
+              correlations. Note that you can only select contests which appear
+              together on at least one ballot cared. Your exploration will be
+              limited to voters who had all selected contests together on a
+              single ballot card.
+            </p>
+          </section>
+          <section>
+            {displayedContests.map((contestId) => (
+              <CheckboxField
+                key={contestId}
+                className="candidate"
+                onChange={() => toggleContestSelected(contestId)}
+                isSelected={selectedContests.includes(contestId)}
+                isDisabled={
+                  !selectedContests.includes(contestId) &&
+                  !possibleContests.has(contestId)
+                }
+              >
+                <CheckboxButton className="candidate-button">
+                  {electionJson.contestDetails[contestId].name}
+                </CheckboxButton>
+              </CheckboxField>
+            ))}
+          </section>
+
+          {selectedContests.length > 0 && (
+            <section className="contest-select-advance-box">
+              {currentBallotCount < 5000 ? (
+                <>
+                  <i className="bi bi-exclamation-triangle-fill" />
+                  <p>
+                    The contests you have selected only have an overlap of{" "}
+                    {currentBallotCount.toLocaleString()} ballot cards (likely
+                    from voters using alternative, accessible voting methods).
+                    Data may be unreliable.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle-fill" />
+                  <p>
+                    {currentBallotCount.toLocaleString()} overlapping ballot
+                    cards found
+                  </p>
+                </>
+              )}
+              <button onClick={() => setMode(DisplayMode.SELECT_CANDIDATES)}>
+                Explore Correlations
+              </button>
+            </section>
+          )}
         </main>
       )}
 
