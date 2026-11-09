@@ -11,7 +11,7 @@ try:
 except ImportError:
     range_func = range
 
-RESULT_FORMAT_VERSION = "1.0.4"
+RESULT_FORMAT_VERSION = "1.0.5"
 
 if len(sys.argv) < 3:
     print("Usage: parse.py cvr_directory output_json", file=sys.stderr)
@@ -29,6 +29,9 @@ with open(os.path.join(sys.argv[1], "ContestManifest.json"), "r") as f:
 with open(os.path.join(sys.argv[1], "ElectionEventManifest.json"), "r") as f:
     election_event_manifest = json.load(f)
 
+with open(os.path.join(sys.argv[1], "PrecinctPortionManifest.json"), "r") as f:
+    precinct_portion_manifest = json.load(f)
+
 # Gather election metadata for eventual output
 assert len(election_event_manifest["List"]) == 1
 election_details = election_event_manifest["List"][0]
@@ -36,6 +39,9 @@ election_details = election_event_manifest["List"][0]
 election_name = election_details["Description"]
 election_date = datetime.date.fromisoformat(election_details["ElectionDate"])
 
+precinct_lookup = {
+    pct["Id"]: pct["ExternalId"] for pct in precinct_portion_manifest["List"]
+}
 
 # TODO just single-choice for now (props, single-candidate offices), skipping multi-candidate (e.g. CCSF board) and ranked-choice
 skipped_contests = set(
@@ -78,6 +84,8 @@ while os.path.isfile(cvr_file_path(cvr_export_max)):
 correlations_result = defaultdict(lambda: defaultdict(int))
 vote_tallies = defaultdict(lambda: defaultdict(int))
 
+redacted_scans = []
+
 for idx in range_func(cvr_export_max):
     with open(cvr_file_path(idx), "r") as f:
         votes_json = json.load(f)
@@ -91,6 +99,20 @@ for idx in range_func(cvr_export_max):
         session_portion_used = (
             session["Modified"] if "Modified" in session else session["Original"]
         )
+
+        possible_redact = session_portion_used["Cards"][0]["Contests"][0]
+        if (
+            type(possible_redact["Marks"]) is str
+            and possible_redact["Marks"].lower().find("redacted") != -1
+        ):
+            redacted_scans.append(
+                {
+                    "precinct": precinct_lookup[
+                        session_portion_used["PrecinctPortionId"]
+                    ],
+                    "imageMask": session["ImageMask"],
+                }
+            )
 
         votes = {
             contest["Id"]: (
@@ -157,6 +179,11 @@ for contest in contest_details.keys():
         )
     print()
 
+if len(redacted_scans) > 0:
+    print(
+        f"WARNING: {len(redacted_scans)} scans were redacted and thus will not be included",
+        file=sys.stderr,
+    )
 
 # Transform result to JSON-compatible types: tuples aren't supported, so
 # simply stringify the array for each key
@@ -168,14 +195,22 @@ correlations_for_json = {
     for contests, vote_totals in correlations_result.items()
 }
 
+contest_overlap_count = {
+    json.dumps(list(contests)): sum(vote_totals.values())
+    for contests, vote_totals in correlations_result.items()
+}
+
+
 json_result = {
     "version": RESULT_FORMAT_VERSION,
     "correlationsResult": correlations_for_json,
+    "contestOverlapCount": contest_overlap_count,
     "contestDetails": contest_details,
     "candidateDetails": candidate_details,
     "electionName": election_name,
     "electionDate": election_date.isoformat(),
     "contestOrder": list(contest_details.keys()),
+    "redactedScans": redacted_scans,
 }
 
 with open(output_filename, "w") as f:
