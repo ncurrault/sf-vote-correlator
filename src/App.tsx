@@ -136,6 +136,22 @@ function App() {
     [setExpandedContests],
   );
 
+  const selectedCandidatesGrouped = React.useMemo(() => {
+    const result: Record<number, number[]> = {};
+    if (!electionJson) {
+      return result;
+    }
+    for (const candidate of selectedCandidates) {
+      const contest = electionJson.candidateDetails[candidate].contestId;
+      if (!result[contest]) {
+        result[contest] = [];
+      }
+      result[contest].push(candidate);
+    }
+
+    return result;
+  }, [electionJson, selectedCandidates]);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -210,56 +226,85 @@ function App() {
       )}
 
       {electionJson && mode === DisplayMode.SELECT_CANDIDATES && (
-        <main className="contest-list">
-          {[...selectedContests].map((contestId) => {
-            const isExpanded = expandedContests.includes(contestId);
-            const allCandidates =
-              electionJson.contestDetails[contestId].candidateOrder;
-            const displayedCandidates = isExpanded
-              ? allCandidates
-              : [
-                  ...allCandidates.slice(0, 4),
-                  ...allCandidates
-                    .slice(4)
-                    .filter((cand) => selectedCandidates.includes(cand)),
-                ];
+        <main>
+          <section className="contest-list">
+            {[...selectedContests].map((contestId) => {
+              const isExpanded = expandedContests.includes(contestId);
+              const allCandidates =
+                electionJson.contestDetails[contestId].candidateOrder;
+              const displayedCandidates = isExpanded
+                ? allCandidates
+                : [
+                    ...allCandidates.slice(0, 4),
+                    ...allCandidates
+                      .slice(4)
+                      .filter((cand) => selectedCandidates.includes(cand)),
+                  ];
 
-            return (
-              <section key={contestId} className="contest">
-                <h2 className="contest-name">
-                  {electionJson.contestDetails[contestId].name}
-                </h2>
-                <div className="candidates">
-                  {displayedCandidates.map((candidateId) => (
-                    <CheckboxField
-                      key={candidateId}
-                      className="candidate"
-                      onChange={() => toggleCandidate(candidateId)}
-                      isSelected={selectedCandidates.includes(candidateId)}
+              return (
+                <section key={contestId} className="contest">
+                  <h2 className="contest-name">
+                    {electionJson.contestDetails[contestId].name}
+                  </h2>
+                  <div className="candidates">
+                    {displayedCandidates.map((candidateId) => (
+                      <CheckboxField
+                        key={candidateId}
+                        className="candidate"
+                        onChange={() => toggleCandidate(candidateId)}
+                        isSelected={selectedCandidates.includes(candidateId)}
+                      >
+                        <CheckboxButton className="candidate-button">
+                          {electionJson.candidateDetails[candidateId].name}
+                        </CheckboxButton>
+                      </CheckboxField>
+                    ))}
+                  </div>
+                  {allCandidates.length > 4 && (
+                    <button
+                      className="expand-candidates-btn"
+                      onClick={() => toggleContestExpanded(contestId)}
                     >
-                      <CheckboxButton className="candidate-button">
-                        {electionJson.candidateDetails[candidateId].name}
-                      </CheckboxButton>
-                    </CheckboxField>
-                  ))}
-                </div>
-                {allCandidates.length > 4 && (
-                  <button
-                    className="expand-candidates-btn"
-                    onClick={() => toggleContestExpanded(contestId)}
-                  >
-                    <i
-                      className={`bi ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`}
-                      style={{ marginRight: "5px" }}
-                    />
-                    {isExpanded
-                      ? "Hide low-ranking candidates"
-                      : "Show all candidates"}
-                  </button>
+                      <i
+                        className={`bi ${isExpanded ? "bi-chevron-up" : "bi-chevron-down"}`}
+                        style={{ marginRight: "5px" }}
+                      />
+                      {isExpanded
+                        ? "Hide low-ranking candidates"
+                        : "Show all candidates"}
+                    </button>
+                  )}
+                </section>
+              );
+            })}
+          </section>
+          {selectedCandidates.length > 0 && (
+            <section className="results-display">
+              <h2>Among voters who voted as follows:</h2>
+              <li>
+                {Object.entries(selectedCandidatesGrouped).map(
+                  ([contestId, candidates]) => (
+                    <li>
+                      {electionJson.contestDetails[contestId].name}
+                      <ul>
+                        {candidates.map((candidateId, i) => (
+                          <li>
+                            {electionJson.candidateDetails[candidateId].name}
+                            {i < candidates.length - 2
+                              ? ","
+                              : i === candidates.length - 2
+                                ? ", or"
+                                : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ),
                 )}
-              </section>
-            );
-          })}
+              </li>
+              <h2></h2>
+            </section>
+          )}
         </main>
       )}
     </div>

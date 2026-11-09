@@ -67,6 +67,10 @@
   outline-offset: 2px;
 }
 
+.results-display {
+  margin: 12px;
+}
+
 .contest-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
