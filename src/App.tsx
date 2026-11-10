@@ -52,7 +52,7 @@ function App() {
     }
     // Ignore a fetch that resolves after the user has moved on
     let cancelled = false;
-    fetch(`/elections/${electionSelected}.json`)
+    fetch(`elections/${electionSelected}.json`)
       .then((res) => res.json())
       .then((newElectionJson: ElectionJson) => {
         if (!cancelled) {
