@@ -1,8 +1,12 @@
 import "./App.css";
 import React from "react";
-import { Button, CheckboxButton, CheckboxField } from "react-aria-components";
+import { CheckboxButton, CheckboxField } from "react-aria-components";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import { UNDERVOTE_SENTINEL, getCandidateName } from "./util";
+import {
+  UNDERVOTE_SENTINEL,
+  getCandidateName,
+  getContestDetails,
+} from "./util";
 import type { ElectionJson, ContestId, CandidateId } from "./types";
 
 export function CandidateSelectAndExplore({
@@ -193,7 +197,7 @@ export function CandidateSelectAndExplore({
             {Object.entries(selectedCandidatesGrouped).map(
               ([contestId, candidates]) => (
                 <li>
-                  {electionJson.contestDetails[contestId].name}
+                  {getContestDetails(electionJson, contestId).name}
                   <ul>
                     {candidates.map((candidateId, i) => (
                       <li>
@@ -215,22 +219,23 @@ export function CandidateSelectAndExplore({
             {Object.entries(contestFilteredResults).map(
               ([contestId, contestResults]) => (
                 <li>
-                  {electionJson.contestDetails[contestId].name}
+                  {getContestDetails(electionJson, contestId).name}
                   <ul>
-                    {electionJson.contestDetails[contestId].candidateOrder.map(
-                      (candidateId: CandidateId) => {
-                        const tally = contestResults[candidateId] ?? 0;
-                        const percentage =
-                          (100 * tally) / totalBallotsInFilteredResult;
-                        return (
-                          <li>
-                            {getCandidateName(electionJson, candidateId)} -{" "}
-                            {tally.toLocaleString()} (
-                            {percentage.toLocaleString()}%)
-                          </li>
-                        );
-                      },
-                    )}
+                    {getContestDetails(
+                      electionJson,
+                      contestId,
+                    ).candidateOrder.map((candidateId: CandidateId) => {
+                      const tally = contestResults[candidateId] ?? 0;
+                      const percentage =
+                        (100 * tally) / totalBallotsInFilteredResult;
+                      return (
+                        <li>
+                          {getCandidateName(electionJson, candidateId)} -{" "}
+                          {tally.toLocaleString()} (
+                          {percentage.toLocaleString()}%)
+                        </li>
+                      );
+                    })}
                     <li>
                       Undervotes/Overvotes -{" "}
                       {(
