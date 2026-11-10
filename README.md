@@ -1,32 +1,28 @@
-# React + TypeScript + Vite
+# SF Vote Correlator
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This is a project intended to reveal correlations between votes in San Francisco using the [cast vote records (CVRs)](https://en.wikipedia.org/wiki/Cast_vote_record)
+that the San Francisco Department of Elections releases to the public every election.
 
-Currently, two official plugins are available:
+## About CVRs
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+These CVRs released to the public are essentially JSON-encoded logs that describe the process of scanning each ballot card: what marks were detected, which were ambiguous, and what the vote result is. These files also contains data that was modified by an election worker later: for example, if a voter makes a mistake, scratches it out and writes something like "mistake, meant to vote yes," the machine may read this as an "overvote" and it may be corrected later using voter intent. Here is an example of one such ballot:
 
-## React Compiler
+![An example of a ballot marking that was later corrected](readme_images/adjudicated_ballot_example.png)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How is this different than other election-results explorers?
 
-## Expanding the Oxlint configuration
+While other sites and news organizations focus on displaying the overall results and correlating these by precinct
+(and other data about each precinct from sources like the U.S. Census), this project is intended to reveal
+correlations _within ballots_ using data uniquely available from the CVR.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## How does it work?
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+The script in `election_data/` allows you to parse CVRs into a JSON format designed to tally correlations. (See [the README within that directory](election_data/README.md) for more details.) This JSON can then be imported by the React application to allow users to explore correlations in the applicable election.
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Pending follow-ups
+
+Currently, races that use ranked-choice voting or multiple candidates are not supported. Additionally,
+I noticed that some CVR entries in June 2026 are marked as "redacted" although ballot-image data is still
+available for these. This sums to a total of less than 30 votes and so does not greatly impact the result,
+so for now I simply display a warning on elections like these with missing data.
