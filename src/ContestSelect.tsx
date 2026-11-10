@@ -64,7 +64,7 @@ export function ContestSelect({
   return (
     <main className="contest-select">
       <section className="contest-select-explanation">
-        <h2>Select election and contests</h2>
+        <h2>Select contests</h2>
         <p>
           Select the contests among which you are interested in analyzing
           correlations. Note that you can only select contests which appear
@@ -72,6 +72,15 @@ export function ContestSelect({
           to voters who had all selected contests together on a single ballot
           card.
         </p>
+        {electionJson.redactedScans.length > 0 && (
+          <p>
+            <i className="bi bi-exclamation-triangle-fill" />
+            &nbsp;
+            <b>Warning</b>: This election's CVR data contains{" "}
+            {electionJson.redactedScans.length.toLocaleString()} scans marked as
+            "redacted." Data may be slightly incomplete.
+          </p>
+        )}
       </section>
       <section>
         {displayedContests.map((contestId) => (
