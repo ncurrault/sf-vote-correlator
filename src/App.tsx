@@ -15,6 +15,7 @@ import {
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 const UNDERVOTE_SENTINEL = -1;
+const UNDERVOTE_LABEL = "Undervote/Overvote";
 interface ElectionJson {
   version: "1.0.5";
   correlationsResult: Record<string, Record<string, number>>;
@@ -178,18 +179,32 @@ function App() {
       ) {
         continue;
       }
-      for (const contest of contestsToEval) {
-        const contestIndex = ballotCardContests.indexOf(contest);
-        if (contestIndex === -1) {
-          console.error(
-            `Contest not found: ${contest} searching in ${ballotCardContests}`,
-          );
+
+      for (const [voteStr, tally] of Object.entries(voteTallies)) {
+        const vote: (number | null)[] = JSON.parse(voteStr);
+
+        let excludeVotes = false;
+        for (const [contestStr, selectedCandidates] of Object.entries(
+          selectedCandidatesGrouped,
+        )) {
+          const contest = parseInt(contestStr, 10);
+          const contestIndex = ballotCardContests.indexOf(contest);
+          if (contestIndex === -1) {
+            console.log("TODO");
+          }
+
+          const voteForThisContest = vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
+
+          if (!selectedCandidates.includes(voteForThisContest)) {
+            excludeVotes = true;
+            break;
+          }
         }
-
-        // TODO filter
-
-        for (const [voteStr, tally] of Object.entries(voteTallies)) {
-          const vote: (number | null)[] = JSON.parse(voteStr);
+        if (excludeVotes) {
+          continue; // This group of votes was excluded by filters
+        }
+        for (const contest of contestsToEval) {
+          const contestIndex = ballotCardContests.indexOf(contest);
           const voteForThisContest = vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
 
           contestFilteredResults[contest][voteForThisContest] =
@@ -198,12 +213,12 @@ function App() {
       }
     }
     return contestFilteredResults;
-  }, [selectedContests]);
+  }, [electionJson, selectedContests, selectedCandidatesGrouped]);
 
   const getCandidateName = React.useCallback(
     (candidateId: number) => {
       if (candidateId === -1) {
-        return "Undervote/Overvote";
+        return UNDERVOTE_LABEL;
       }
       return electionJson?.candidateDetails[candidateId]?.name ?? "error";
     },
@@ -222,7 +237,7 @@ function App() {
       {electionJson && mode === DisplayMode.SELECT_CONTESTS && (
         <main className="contest-select">
           <section className="contest-select-explanation">
-            <h2>Step one: select contests</h2>
+            <h2>Select election and contests</h2>
             <p>
               Select the contests among which you are interested in analyzing
               correlations. Note that you can only select contests which appear
@@ -313,7 +328,7 @@ function App() {
                         isSelected={selectedCandidates.includes(candidateId)}
                       >
                         <CheckboxButton className="candidate-button">
-                          {electionJson.candidateDetails[candidateId].name}
+                          {getCandidateName(candidateId)}
                         </CheckboxButton>
                       </CheckboxField>
                     ))}
@@ -371,15 +386,17 @@ function App() {
                           contestId
                         ].candidateOrder.map((candidateId) => (
                           <li>
-                            {`${getCandidateName(candidateId)} - ${(contestResults[candidateId] ?? 0).toLocaleString()}`}
+                            {getCandidateName(candidateId)} -{" "}
+                            {(
+                              contestResults[candidateId] ?? 0
+                            ).toLocaleString()}
                           </li>
                         ))}
                         <li>
                           Undervotes/Overvotes -{" "}
-                          {
-                            (contestResults[UNDERVOTE_SENTINEL] ?? 0)
-                              .toLocaleString
-                          }
+                          {(
+                            contestResults[UNDERVOTE_SENTINEL] ?? 0
+                          ).toLocaleString()}
                         </li>
                       </ul>
                     </li>
