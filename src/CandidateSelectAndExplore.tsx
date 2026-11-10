@@ -3,20 +3,20 @@ import React from "react";
 import { Button, CheckboxButton, CheckboxField } from "react-aria-components";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { UNDERVOTE_SENTINEL, getCandidateName } from "./util";
-import type { ElectionJson } from "./types";
+import type { ElectionJson, ContestId, CandidateId } from "./types";
 
 export function CandidateSelectAndExplore({
   electionJson,
   selectedContests,
 }: {
   electionJson: ElectionJson;
-  selectedContests: number[];
+  selectedContests: ContestId[];
 }) {
-  const [selectedCandidates, setSelectedCandidates] = React.useState<number[]>(
-    [],
-  );
+  const [selectedCandidates, setSelectedCandidates] = React.useState<
+    CandidateId[]
+  >([]);
   const toggleCandidate = React.useCallback(
-    (candidate: number) =>
+    (candidate: CandidateId) =>
       setSelectedCandidates((existing) =>
         existing.includes(candidate)
           ? existing.filter((x) => x !== candidate)
@@ -24,9 +24,11 @@ export function CandidateSelectAndExplore({
       ),
     [setSelectedCandidates],
   );
-  const [expandedContests, setExpandedContests] = React.useState<number[]>([]);
+  const [expandedContests, setExpandedContests] = React.useState<ContestId[]>(
+    [],
+  );
   const toggleContestExpanded = React.useCallback(
-    (contestId: number) =>
+    (contestId: ContestId) =>
       setExpandedContests((currExpanded) =>
         currExpanded.includes(contestId)
           ? currExpanded.filter((x) => x !== contestId)
@@ -36,7 +38,7 @@ export function CandidateSelectAndExplore({
   );
 
   const selectedCandidatesGrouped = React.useMemo(() => {
-    const result: Record<number, number[]> = {};
+    const result: Record<ContestId, CandidateId[]> = {};
     if (!electionJson) {
       return result;
     }
@@ -54,8 +56,10 @@ export function CandidateSelectAndExplore({
     const contestsToEval = selectedContests.filter(
       (contest) => !selectedCandidatesGrouped[contest],
     );
-    const contestFilteredResults: Record<number, Record<number, number>> = {};
-    // contest -> candidate -> votes
+    const contestFilteredResults: Record<
+      ContestId,
+      Record<CandidateId, number>
+    > = {};
     if (!electionJson) {
       return contestFilteredResults;
     }
@@ -67,7 +71,7 @@ export function CandidateSelectAndExplore({
     for (const [contestsStr, voteTallies] of Object.entries(
       electionJson?.correlationsResult,
     )) {
-      const ballotCardContests: number[] = JSON.parse(contestsStr);
+      const ballotCardContests: ContestId[] = JSON.parse(contestsStr);
       // if this ballot card type does not contain everything we're interested in, skip it
       if (
         selectedContests.some(
@@ -78,19 +82,22 @@ export function CandidateSelectAndExplore({
       }
 
       for (const [voteStr, tally] of Object.entries(voteTallies)) {
-        const vote: (number | null)[] = JSON.parse(voteStr);
+        const vote: (CandidateId | null)[] = JSON.parse(voteStr);
 
         let excludeVotes = false;
         for (const [contestStr, selectedCandidates] of Object.entries(
           selectedCandidatesGrouped,
         )) {
-          const contest = parseInt(contestStr, 10);
+          const contest: ContestId = parseInt(contestStr, 10); // ts object keys are automatically converted to strings; parse back to integers
           const contestIndex = ballotCardContests.indexOf(contest);
           if (contestIndex === -1) {
-            console.log("TODO");
+            console.error(
+              `Contest not found: ${contest} in ${ballotCardContests}`,
+            );
           }
 
-          const voteForThisContest = vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
+          const voteForThisContest: CandidateId =
+            vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
 
           if (!selectedCandidates.includes(voteForThisContest)) {
             excludeVotes = true;
@@ -102,6 +109,12 @@ export function CandidateSelectAndExplore({
         }
         for (const contest of contestsToEval) {
           const contestIndex = ballotCardContests.indexOf(contest);
+          if (contestIndex === -1) {
+            console.error(
+              `Contest not found: ${contest} in ${ballotCardContests}`,
+            );
+          }
+
           const voteForThisContest = vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
 
           contestFilteredResults[contest][voteForThisContest] =

@@ -1,7 +1,7 @@
 import "./App.css";
 import React from "react";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import type { ElectionJson } from "./types";
+import type { ContestId, ElectionJson } from "./types";
 import { ContestSelect } from "./ContestSelect";
 import { CandidateSelectAndExplore } from "./CandidateSelectAndExplore";
 
@@ -16,7 +16,18 @@ function App() {
   const [mode, setMode] = React.useState<DisplayMode>(
     DisplayMode.SELECT_CONTESTS,
   );
-  const [selectedContests, setSelectedContests] = React.useState<number[]>([]);
+  const [selectedContests, setSelectedContests] = React.useState<ContestId[]>(
+    [],
+  );
+  const toggleContestSelected = React.useCallback(
+    (contestId: ContestId) =>
+      setSelectedContests((currSelected: ContestId[]) =>
+        currSelected.includes(contestId)
+          ? currSelected.filter((x) => x !== contestId)
+          : [...currSelected, contestId],
+      ),
+    [setSelectedContests],
+  );
 
   React.useEffect(() => {
     fetch("/elections/2026-06-02.json")
@@ -40,7 +51,7 @@ function App() {
           electionJson={electionJson}
           onAdvance={() => setMode(DisplayMode.SELECT_CANDIDATES)}
           selectedContests={selectedContests}
-          setSelectedContests={setSelectedContests}
+          toggleContestSelected={toggleContestSelected}
         />
       )}
 

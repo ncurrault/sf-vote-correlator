@@ -1,20 +1,30 @@
 export type CandidateId = number;
 export type ContestId = number;
+
+export type ContestIDsJSONString = string;
+export type CandidateIDsJSONString = string;
+
 export interface ElectionJson {
   version: "1.0.5";
-  correlationsResult: Record<string, Record<string, number>>;
-  contestDetails: Record<number, { name: string; candidateOrder: number[] }>;
-  contestOverlapCount: Record<string, number>;
+  correlationsResult: Record<
+    ContestIDsJSONString,
+    Record<CandidateIDsJSONString, number>
+  >;
+  contestDetails: Record<
+    ContestId,
+    { name: string; candidateOrder: CandidateId[] }
+  >;
+  contestOverlapCount: Record<ContestIDsJSONString, number>;
   candidateDetails: Record<
-    number,
+    CandidateId,
     {
       name: string;
-      contestId: number;
+      contestId: ContestId;
     }
   >;
   electionName: string;
   electionDate: string;
-  contestOrder: number[];
+  contestOrder: ContestId[];
   redactedScans: {
     precinct: string;
     imageMask: string;
