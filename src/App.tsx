@@ -1,5 +1,6 @@
 import "./App.css";
 import React from "react";
+import { Button } from "react-aria-components";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import type { ContestId, ElectionJson } from "./types";
 import { ContestSelect } from "./ContestSelect";
@@ -19,7 +20,7 @@ enum DisplayMode {
 }
 
 function App() {
-  const [electionSelected, setElection] = React.useState<string | null>(null);
+  const [electionSelected, setElection] = React.useState<string>();
 
   const [electionJson, setElectionJson] = React.useState<ElectionJson>();
   const [mode, setMode] = React.useState<DisplayMode>(
@@ -38,23 +39,39 @@ function App() {
     [setSelectedContests],
   );
 
+  const onReset = React.useCallback(() => {
+    setElection(undefined);
+    setElectionJson(undefined);
+    setMode(DisplayMode.SELECT_CONTESTS);
+    setSelectedContests([]);
+  }, []);
+
   React.useEffect(() => {
     if (!electionSelected) {
       return;
     }
+    // Ignore a fetch that resolves after the user has moved on
+    let cancelled = false;
     fetch(`/elections/${electionSelected}.json`)
       .then((res) => res.json())
       .then((newElectionJson: ElectionJson) => {
-        setElectionJson(newElectionJson);
+        if (!cancelled) {
+          setElectionJson(newElectionJson);
+        }
       });
+    return () => {
+      cancelled = true;
+    };
   }, [electionSelected]);
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>
-          <i className="bi bi-intersect" style={{ marginRight: "10px" }} />
-          SF Elections Correlator
+          <Button className="title-button" onPress={onReset}>
+            <i className="bi bi-intersect" style={{ marginRight: "10px" }} />
+            SF Elections Correlator
+          </Button>
         </h1>
       </header>
 
@@ -75,10 +92,19 @@ function App() {
       )}
 
       {electionJson && mode === DisplayMode.SELECT_CANDIDATES && (
-        <CandidateSelectAndExplore
-          electionJson={electionJson}
-          selectedContests={selectedContests}
-        />
+        <>
+          <Button
+            className="back-button"
+            onPress={() => setMode(DisplayMode.SELECT_CONTESTS)}
+          >
+            <i className="bi bi-arrow-left" />
+            Back to contests
+          </Button>
+          <CandidateSelectAndExplore
+            electionJson={electionJson}
+            selectedContests={selectedContests}
+          />
+        </>
       )}
     </div>
   );
