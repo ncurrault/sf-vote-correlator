@@ -5,13 +5,16 @@ import type { ContestId, ElectionJson } from "./types";
 import { ContestSelect } from "./ContestSelect";
 import { CandidateSelectAndExplore } from "./CandidateSelectAndExplore";
 
+const ELECTIONS_AVAILABLE = ["2026-06-02", "2024-11-05", "2024-03-05"];
+
 enum DisplayMode {
-  // TODO select election, constant with JSON paths that are loadable
   SELECT_CONTESTS = "SELECT_CONTESTS",
   SELECT_CANDIDATES = "SELECT_CANDIDATES",
 }
 
 function App() {
+  const [electionSelected, setElection] = React.useState<string | null>(null);
+
   const [electionJson, setElectionJson] = React.useState<ElectionJson>();
   const [mode, setMode] = React.useState<DisplayMode>(
     DisplayMode.SELECT_CONTESTS,
@@ -30,12 +33,15 @@ function App() {
   );
 
   React.useEffect(() => {
-    fetch("/elections/2026-06-02.json")
+    if (!electionSelected) {
+      return;
+    }
+    fetch(`/elections/${electionSelected}.json`)
       .then((res) => res.json())
       .then((newElectionJson: ElectionJson) => {
         setElectionJson(newElectionJson);
       });
-  }, []); // TODO depend on election selected, handle tear down and reload
+  }, [electionSelected]);
 
   return (
     <div className="app">
@@ -45,6 +51,8 @@ function App() {
           SF Elections Correlator
         </h1>
       </header>
+
+      {!electionSelected && <></>}
 
       {electionJson && mode === DisplayMode.SELECT_CONTESTS && (
         <ContestSelect
