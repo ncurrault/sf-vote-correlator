@@ -14,8 +14,9 @@ import {
 } from "react-aria-components";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
+const UNDERVOTE_SENTINEL = -1;
 interface ElectionJson {
-  version: "1.0.3";
+  version: "1.0.5";
   correlationsResult: Record<string, Record<string, number>>;
   contestDetails: Record<number, { name: string; candidateOrder: number[] }>;
   contestOverlapCount: Record<string, number>;
@@ -151,6 +152,63 @@ function App() {
 
     return result;
   }, [electionJson, selectedCandidates]);
+  const contestFilteredResults = React.useMemo(() => {
+    const contestsToEval = selectedContests.filter(
+      (contest) => !selectedCandidatesGrouped[contest],
+    );
+    const contestFilteredResults: Record<number, Record<number, number>> = {};
+    // contest -> candidate -> votes
+    if (!electionJson) {
+      return contestFilteredResults;
+    }
+
+    for (const contest of contestsToEval) {
+      contestFilteredResults[contest] = {};
+    }
+
+    for (const [contestsStr, voteTallies] of Object.entries(
+      electionJson?.correlationsResult,
+    )) {
+      const ballotCardContests: number[] = JSON.parse(contestsStr);
+      // if this ballot card type does not contain everything we're interested in, skip it
+      if (
+        selectedContests.some(
+          (requiredContest) => !ballotCardContests.includes(requiredContest),
+        )
+      ) {
+        continue;
+      }
+      for (const contest of contestsToEval) {
+        const contestIndex = ballotCardContests.indexOf(contest);
+        if (contestIndex === -1) {
+          console.error(
+            `Contest not found: ${contest} searching in ${ballotCardContests}`,
+          );
+        }
+
+        // TODO filter
+
+        for (const [voteStr, tally] of Object.entries(voteTallies)) {
+          const vote: (number | null)[] = JSON.parse(voteStr);
+          const voteForThisContest = vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
+
+          contestFilteredResults[contest][voteForThisContest] =
+            (contestFilteredResults[contest][voteForThisContest] ?? 0) + tally;
+        }
+      }
+    }
+    return contestFilteredResults;
+  }, [selectedContests]);
+
+  const getCandidateName = React.useCallback(
+    (candidateId: number) => {
+      if (candidateId === -1) {
+        return "Undervote/Overvote";
+      }
+      return electionJson?.candidateDetails[candidateId]?.name ?? "error";
+    },
+    [electionJson],
+  );
 
   return (
     <div className="app">
@@ -281,7 +339,7 @@ function App() {
           {selectedCandidates.length > 0 && (
             <section className="results-display">
               <h2>Among voters who voted as follows:</h2>
-              <li>
+              <ul>
                 {Object.entries(selectedCandidatesGrouped).map(
                   ([contestId, candidates]) => (
                     <li>
@@ -301,8 +359,33 @@ function App() {
                     </li>
                   ),
                 )}
-              </li>
-              <h2></h2>
+              </ul>
+              <h2>The remaining contest results were:</h2>
+              <ul>
+                {Object.entries(contestFilteredResults).map(
+                  ([contestId, contestResults]) => (
+                    <li>
+                      {electionJson.contestDetails[contestId].name}
+                      <ul>
+                        {electionJson.contestDetails[
+                          contestId
+                        ].candidateOrder.map((candidateId) => (
+                          <li>
+                            {`${getCandidateName(candidateId)} - ${(contestResults[candidateId] ?? 0).toLocaleString()}`}
+                          </li>
+                        ))}
+                        <li>
+                          Undervotes/Overvotes -{" "}
+                          {
+                            (contestResults[UNDERVOTE_SENTINEL] ?? 0)
+                              .toLocaleString
+                          }
+                        </li>
+                      </ul>
+                    </li>
+                  ),
+                )}
+              </ul>
             </section>
           )}
         </main>
