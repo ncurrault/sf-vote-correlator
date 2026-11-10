@@ -52,78 +52,83 @@ export function CandidateSelectAndExplore({
 
     return result;
   }, [electionJson, selectedCandidates]);
-  const contestFilteredResults = React.useMemo(() => {
-    const contestsToEval = selectedContests.filter(
-      (contest) => !selectedCandidatesGrouped[contest],
-    );
-    const contestFilteredResults: Record<
-      ContestId,
-      Record<CandidateId, number>
-    > = {};
-    if (!electionJson) {
-      return contestFilteredResults;
-    }
+  const { contestFilteredResults, totalBallotsInFilteredResult } =
+    React.useMemo(() => {
+      const contestsToEval = selectedContests.filter(
+        (contest) => !selectedCandidatesGrouped[contest],
+      );
+      const contestFilteredResults: Record<
+        ContestId,
+        Record<CandidateId, number>
+      > = {};
+      let totalBallotsInFilteredResult = 0;
 
-    for (const contest of contestsToEval) {
-      contestFilteredResults[contest] = {};
-    }
-
-    for (const [contestsStr, voteTallies] of Object.entries(
-      electionJson?.correlationsResult,
-    )) {
-      const ballotCardContests: ContestId[] = JSON.parse(contestsStr);
-      // if this ballot card type does not contain everything we're interested in, skip it
-      if (
-        selectedContests.some(
-          (requiredContest) => !ballotCardContests.includes(requiredContest),
-        )
-      ) {
-        continue;
+      if (!electionJson) {
+        return { contestFilteredResults, totalBallotsInFilteredResult };
       }
 
-      for (const [voteStr, tally] of Object.entries(voteTallies)) {
-        const vote: (CandidateId | null)[] = JSON.parse(voteStr);
+      for (const contest of contestsToEval) {
+        contestFilteredResults[contest] = {};
+      }
 
-        let excludeVotes = false;
-        for (const [contestStr, selectedCandidates] of Object.entries(
-          selectedCandidatesGrouped,
-        )) {
-          const contest: ContestId = parseInt(contestStr, 10); // ts object keys are automatically converted to strings; parse back to integers
-          const contestIndex = ballotCardContests.indexOf(contest);
-          if (contestIndex === -1) {
-            console.error(
-              `Contest not found: ${contest} in ${ballotCardContests}`,
-            );
-          }
-
-          const voteForThisContest: CandidateId =
-            vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
-
-          if (!selectedCandidates.includes(voteForThisContest)) {
-            excludeVotes = true;
-            break;
-          }
+      for (const [contestsStr, voteTallies] of Object.entries(
+        electionJson?.correlationsResult,
+      )) {
+        const ballotCardContests: ContestId[] = JSON.parse(contestsStr);
+        // if this ballot card type does not contain everything we're interested in, skip it
+        if (
+          selectedContests.some(
+            (requiredContest) => !ballotCardContests.includes(requiredContest),
+          )
+        ) {
+          continue;
         }
-        if (excludeVotes) {
-          continue; // This group of votes was excluded by filters
-        }
-        for (const contest of contestsToEval) {
-          const contestIndex = ballotCardContests.indexOf(contest);
-          if (contestIndex === -1) {
-            console.error(
-              `Contest not found: ${contest} in ${ballotCardContests}`,
-            );
+
+        for (const [voteStr, tally] of Object.entries(voteTallies)) {
+          const vote: (CandidateId | null)[] = JSON.parse(voteStr);
+
+          let excludeVotes = false;
+          for (const [contestStr, selectedCandidates] of Object.entries(
+            selectedCandidatesGrouped,
+          )) {
+            const contest: ContestId = parseInt(contestStr, 10); // ts object keys are automatically converted to strings; parse back to integers
+            const contestIndex = ballotCardContests.indexOf(contest);
+            if (contestIndex === -1) {
+              console.error(
+                `Contest not found: ${contest} in ${ballotCardContests}`,
+              );
+            }
+
+            const voteForThisContest: CandidateId =
+              vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
+
+            if (!selectedCandidates.includes(voteForThisContest)) {
+              excludeVotes = true;
+              break;
+            }
           }
+          if (excludeVotes) {
+            continue; // This group of votes was excluded by filters
+          }
+          for (const contest of contestsToEval) {
+            const contestIndex = ballotCardContests.indexOf(contest);
+            if (contestIndex === -1) {
+              console.error(
+                `Contest not found: ${contest} in ${ballotCardContests}`,
+              );
+            }
 
-          const voteForThisContest = vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
+            const voteForThisContest = vote[contestIndex] ?? UNDERVOTE_SENTINEL; // ts doesn't support null as index
 
-          contestFilteredResults[contest][voteForThisContest] =
-            (contestFilteredResults[contest][voteForThisContest] ?? 0) + tally;
+            contestFilteredResults[contest][voteForThisContest] =
+              (contestFilteredResults[contest][voteForThisContest] ?? 0) +
+              tally;
+            totalBallotsInFilteredResult += tally;
+          }
         }
       }
-    }
-    return contestFilteredResults;
-  }, [electionJson, selectedContests, selectedCandidatesGrouped]);
+      return { contestFilteredResults, totalBallotsInFilteredResult };
+    }, [electionJson, selectedContests, selectedCandidatesGrouped]);
 
   return (
     <main>
@@ -180,7 +185,10 @@ export function CandidateSelectAndExplore({
       </section>
       {selectedCandidates.length > 0 && (
         <section className="results-display">
-          <h2>Among voters who voted as follows:</h2>
+          <h2>
+            Among {totalBallotsInFilteredResult.toLocaleString()} voters who
+            voted as follows:
+          </h2>
           <ul>
             {Object.entries(selectedCandidatesGrouped).map(
               ([contestId, candidates]) => (
@@ -210,18 +218,30 @@ export function CandidateSelectAndExplore({
                   {electionJson.contestDetails[contestId].name}
                   <ul>
                     {electionJson.contestDetails[contestId].candidateOrder.map(
-                      (candidateId) => (
-                        <li>
-                          {getCandidateName(electionJson, candidateId)} -{" "}
-                          {(contestResults[candidateId] ?? 0).toLocaleString()}
-                        </li>
-                      ),
+                      (candidateId: CandidateId) => {
+                        const tally = contestResults[candidateId] ?? 0;
+                        const percentage =
+                          (100 * tally) / totalBallotsInFilteredResult;
+                        return (
+                          <li>
+                            {getCandidateName(electionJson, candidateId)} -{" "}
+                            {tally.toLocaleString()} (
+                            {percentage.toLocaleString()}%)
+                          </li>
+                        );
+                      },
                     )}
                     <li>
                       Undervotes/Overvotes -{" "}
                       {(
                         contestResults[UNDERVOTE_SENTINEL] ?? 0
+                      ).toLocaleString()}{" "}
+                      (
+                      {(
+                        (100 * (contestResults[UNDERVOTE_SENTINEL] ?? 0)) /
+                        totalBallotsInFilteredResult
                       ).toLocaleString()}
+                      %)
                     </li>
                   </ul>
                 </li>
