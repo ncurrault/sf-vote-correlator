@@ -73,6 +73,15 @@ function App() {
             SF Elections Correlator
           </Button>
         </h1>
+        {electionJson && mode === DisplayMode.SELECT_CANDIDATES && (
+          <Button
+            className="back-button"
+            onPress={() => setMode(DisplayMode.SELECT_CONTESTS)}
+          >
+            <i className="bi bi-arrow-left" />
+            Back to contests
+          </Button>
+        )}
       </header>
 
       {!electionSelected && (
@@ -92,19 +101,10 @@ function App() {
       )}
 
       {electionJson && mode === DisplayMode.SELECT_CANDIDATES && (
-        <>
-          <Button
-            className="back-button"
-            onPress={() => setMode(DisplayMode.SELECT_CONTESTS)}
-          >
-            <i className="bi bi-arrow-left" />
-            Back to contests
-          </Button>
-          <CandidateSelectAndExplore
-            electionJson={electionJson}
-            selectedContests={selectedContests}
-          />
-        </>
+        <CandidateSelectAndExplore
+          electionJson={electionJson}
+          selectedContests={selectedContests}
+        />
       )}
     </div>
   );
