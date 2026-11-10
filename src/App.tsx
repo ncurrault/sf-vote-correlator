@@ -1,41 +1,9 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "./assets/vite.svg";
-import heroImg from "./assets/hero.png";
 import "./App.css";
 import React from "react";
-import {
-  Button,
-  Checkbox,
-  CheckboxButton,
-  CheckboxField,
-  Form,
-  Input,
-} from "react-aria-components";
+import { Button, CheckboxButton, CheckboxField } from "react-aria-components";
 import "bootstrap-icons/font/bootstrap-icons.css";
-
-const UNDERVOTE_SENTINEL = -1;
-const UNDERVOTE_LABEL = "Undervote/Overvote";
-interface ElectionJson {
-  version: "1.0.5";
-  correlationsResult: Record<string, Record<string, number>>;
-  contestDetails: Record<number, { name: string; candidateOrder: number[] }>;
-  contestOverlapCount: Record<string, number>;
-  candidateDetails: Record<
-    number,
-    {
-      name: string;
-      contestId: number;
-    }
-  >;
-  electionName: string;
-  electionDate: string;
-  contestOrder: number[];
-  redactedScans: {
-    precinct: string;
-    imageMask: string;
-  }[];
-}
+import { UNDERVOTE_SENTINEL, getCandidateName } from "./util";
+import type { ElectionJson } from "./types";
 
 enum DisplayMode {
   SELECT_CONTESTS = "SELECT_CONTESTS",
@@ -215,16 +183,6 @@ function App() {
     return contestFilteredResults;
   }, [electionJson, selectedContests, selectedCandidatesGrouped]);
 
-  const getCandidateName = React.useCallback(
-    (candidateId: number) => {
-      if (candidateId === -1) {
-        return UNDERVOTE_LABEL;
-      }
-      return electionJson?.candidateDetails[candidateId]?.name ?? "error";
-    },
-    [electionJson],
-  );
-
   return (
     <div className="app">
       <header className="app-header">
@@ -241,7 +199,7 @@ function App() {
             <p>
               Select the contests among which you are interested in analyzing
               correlations. Note that you can only select contests which appear
-              together on at least one ballot cared. Your exploration will be
+              together on at least one ballot card. Your exploration will be
               limited to voters who had all selected contests together on a
               single ballot card.
             </p>
@@ -328,7 +286,7 @@ function App() {
                         isSelected={selectedCandidates.includes(candidateId)}
                       >
                         <CheckboxButton className="candidate-button">
-                          {getCandidateName(candidateId)}
+                          {getCandidateName(electionJson, candidateId)}
                         </CheckboxButton>
                       </CheckboxField>
                     ))}
@@ -386,7 +344,7 @@ function App() {
                           contestId
                         ].candidateOrder.map((candidateId) => (
                           <li>
-                            {getCandidateName(candidateId)} -{" "}
+                            {getCandidateName(electionJson, candidateId)} -{" "}
                             {(
                               contestResults[candidateId] ?? 0
                             ).toLocaleString()}
