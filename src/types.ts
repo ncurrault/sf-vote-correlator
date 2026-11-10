@@ -1,3 +1,5 @@
+export type CandidateId = number;
+export type ContestId = number;
 export interface ElectionJson {
   version: "1.0.5";
   correlationsResult: Record<string, Record<string, number>>;
