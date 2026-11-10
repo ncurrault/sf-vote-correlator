@@ -4,8 +4,14 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import type { ContestId, ElectionJson } from "./types";
 import { ContestSelect } from "./ContestSelect";
 import { CandidateSelectAndExplore } from "./CandidateSelectAndExplore";
+import { ElectionSelect } from "./ElectionSelect";
 
-const ELECTIONS_AVAILABLE = ["2026-06-02", "2024-11-05", "2024-03-05"];
+const ELECTIONS_AVAILABLE = [
+  "2026-11-03_prelim10",
+  "2026-06-02",
+  "2024-11-05",
+  "2024-03-05",
+];
 
 enum DisplayMode {
   SELECT_CONTESTS = "SELECT_CONTESTS",
@@ -52,7 +58,12 @@ function App() {
         </h1>
       </header>
 
-      {!electionSelected && <></>}
+      {!electionSelected && (
+        <ElectionSelect
+          elections={ELECTIONS_AVAILABLE}
+          onSelect={setElection}
+        />
+      )}
 
       {electionJson && mode === DisplayMode.SELECT_CONTESTS && (
         <ContestSelect

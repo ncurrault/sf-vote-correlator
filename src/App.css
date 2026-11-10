@@ -172,3 +172,42 @@
   align-items: center;
   margin-top: 5px;
 }
+
+.election-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.election-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text-h);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.election-button[data-hovered] {
+  border-color: var(--accent-border);
+  background: var(--code-bg);
+}
+
+.election-button[data-pressed] {
+  background: var(--accent-bg);
+}
+
+.election-button[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
