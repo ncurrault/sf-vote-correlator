@@ -93,30 +93,34 @@ export function ContestSelect({
       </section>
 
       {selectedContests.length >= 2 && (
-        <section className="contest-select-advance-box">
-          {currentBallotCount < 5000 ? (
-            <>
-              <i className="bi bi-exclamation-triangle-fill" />
-              <p>
-                The contests you have selected only have an overlap of{" "}
-                {currentBallotCount.toLocaleString()} ballot cards (likely from
-                voters using alternative, accessible voting methods). Data may
-                be unreliable.
-              </p>
-            </>
-          ) : (
-            <>
-              <i className="bi bi-check-circle-fill" />
-              <p>
-                {currentBallotCount.toLocaleString()} overlapping ballot cards
-                found
-              </p>
-            </>
-          )}
-          <Button className="advance-button" onPress={onAdvance}>
-            Explore Correlations
-            <i className="bi bi-arrow-right" />
-          </Button>
+        <section className="contest-select-advance">
+          <div className="contest-select-advance-sticky">
+            <div className="contest-select-advance-box">
+              {currentBallotCount < 5000 ? (
+                <>
+                  <i className="bi bi-exclamation-triangle-fill" />
+                  <p>
+                    The contests you have selected only have an overlap of{" "}
+                    {currentBallotCount.toLocaleString()} ballot cards (likely
+                    from voters using alternative, accessible voting methods).
+                    Data may be unreliable.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle-fill" />
+                  <p>
+                    {currentBallotCount.toLocaleString()} overlapping ballot
+                    cards found
+                  </p>
+                </>
+              )}
+              <Button className="advance-button" onPress={onAdvance}>
+                Explore Correlations
+                <i className="bi bi-arrow-right" />
+              </Button>
+            </div>
+          </div>
         </section>
       )}
     </main>

@@ -19,6 +19,19 @@
   grid-column: span 2;
 }
 
+/* The advance cell stretches to the height of the contest list; the sticky
+   wrapper is at most one viewport tall, so the box stays centered on screen
+   while the list scrolls past. */
+.contest-select-advance-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .contest-select-advance-box {
   display: flex;
   flex-direction: column;
