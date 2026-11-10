@@ -106,6 +106,13 @@ function App() {
           selectedContests={selectedContests}
         />
       )}
+
+      <footer className="app-footer">
+        <p>
+          A project by Nicholas Currault. Open source on{" "}
+          <a href="https://github.com/ncurrault/sf-vote-correlator">GitHub</a>.
+        </p>
+      </footer>
     </div>
   );
 }
