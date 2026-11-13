@@ -26,3 +26,7 @@ Currently, races that use ranked-choice voting or multiple candidates are not su
 I noticed that some CVR entries in June 2026 are marked as "redacted" although ballot-image data is still
 available for these. This sums to a total of less than 30 votes and so does not greatly impact the result,
 so for now I simply display a warning on elections like these with missing data.
+
+## A note on AI usage
+
+Most of this is coded by hand, but I used AI for some of the styling on the frontend. Code written by AI is confined to git commits with "\[AI\]" prepended to the commit message.
