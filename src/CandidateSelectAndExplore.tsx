@@ -43,9 +43,6 @@ export function CandidateSelectAndExplore({
 
   const selectedCandidatesGrouped = React.useMemo(() => {
     const result: Record<ContestId, CandidateId[]> = {};
-    if (!electionJson) {
-      return result;
-    }
     for (const candidate of selectedCandidates) {
       const contest = electionJson.candidateDetails[candidate].contestId;
       if (!result[contest]) {
@@ -134,6 +131,58 @@ export function CandidateSelectAndExplore({
       return { contestFilteredResults, totalBallotsInFilteredResult };
     }, [electionJson, selectedContests, selectedCandidatesGrouped]);
 
+  const twoContestGrid = React.useMemo(() => {
+    const contestsStr = Object.keys(selectedCandidatesGrouped);
+    if (contestsStr.length !== 2) {
+      return null;
+    }
+    const contests = contestsStr.map((x) => parseInt(x, 10));
+    console.log({ contestsStr, contests });
+    const horizContest = contests[0];
+    const vertContest = contests[1];
+    const gridData: Record<CandidateId, Record<CandidateId, number>> = {}; // horiz vote -> vert vote -> tally (and include UNDERVOTE_SENTINEL for missing)
+    for (const [contestsStr, voteTallies] of Object.entries(
+      electionJson.correlationsResult,
+    )) {
+      const entryContests: ContestId[] = JSON.parse(contestsStr).map((x) =>
+        parseInt(x, 10),
+      );
+      if (
+        !entryContests.includes(horizContest) ||
+        !entryContests.includes(vertContest)
+      ) {
+        continue; // this vote does not have any relevant data
+      }
+
+      const horizIdx = entryContests.indexOf(horizContest);
+      const vertIdx = entryContests.indexOf(vertContest);
+
+      for (const [voteStr, tally] of Object.entries(voteTallies)) {
+        const vote: CandidateId[] = JSON.parse(voteStr).map((x) =>
+          x ? parseInt(x, 10) : UNDERVOTE_SENTINEL,
+        );
+        const horizVote = vote[horizIdx];
+        const vertVote = vote[vertIdx];
+
+        if (
+          (horizVote !== UNDERVOTE_SENTINEL &&
+            !selectedCandidates.includes(horizVote)) ||
+          (vertVote !== UNDERVOTE_SENTINEL &&
+            !selectedCandidates.includes(vertVote))
+        ) {
+          continue;
+        }
+
+        if (!gridData[horizVote]) {
+          gridData[horizVote] = {};
+        }
+        gridData[horizVote][vertVote] =
+          (gridData[horizVote][vertVote] ?? 0) + tally;
+      }
+    }
+    return { gridData, horizContest, vertContest };
+  }, [electionJson, selectedCandidates, selectedContests]);
+
   return (
     <main>
       <section className="contest-list">
@@ -187,7 +236,54 @@ export function CandidateSelectAndExplore({
           );
         })}
       </section>
-      {selectedCandidates.length > 0 && (
+      {twoContestGrid && (
+        <section>
+          <h2>Correlations between selected candidates:</h2>
+          {electionJson.contestDetails[twoContestGrid.vertContest].name}
+          <table>
+            <tr>
+              <th />
+              <th
+                colSpan={
+                  selectedCandidatesGrouped[twoContestGrid.horizContest].length
+                }
+              >
+                {electionJson.contestDetails[twoContestGrid.horizContest].name}
+              </th>
+            </tr>
+            <tr>
+              <th />
+              {[
+                ...selectedCandidatesGrouped[twoContestGrid.horizContest],
+                UNDERVOTE_SENTINEL,
+              ].map((candidate: CandidateId) => (
+                <th>{getCandidateName(electionJson, candidate)}</th>
+              ))}
+            </tr>
+            {[
+              ...selectedCandidatesGrouped[twoContestGrid.vertContest],
+              UNDERVOTE_SENTINEL,
+            ].map((vertCandidate: CandidateId) => (
+              <tr>
+                <th>{getCandidateName(electionJson, vertCandidate)}</th>
+                {[
+                  ...selectedCandidatesGrouped[twoContestGrid.horizContest],
+                  UNDERVOTE_SENTINEL,
+                ].map((horizCandidate: CandidateId) => (
+                  <td>
+                    {(
+                      (twoContestGrid.gridData[horizCandidate] ?? {})[
+                        vertCandidate
+                      ] ?? 0
+                    ).toLocaleString()}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </table>
+        </section>
+      )}
+      {!twoContestGrid && selectedCandidates.length > 0 && (
         <section className="results-display">
           <h2>
             Among {totalBallotsInFilteredResult.toLocaleString()} voters who
