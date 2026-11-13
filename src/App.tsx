@@ -8,7 +8,7 @@ import { CandidateSelectAndExplore } from "./CandidateSelectAndExplore";
 import { ElectionSelect } from "./ElectionSelect";
 
 const ELECTIONS_AVAILABLE = [
-  "2026-11-03_prelim10",
+  "2026-11-03_prelim11",
   "2026-06-02",
   "2024-11-05",
   "2024-03-05",
