@@ -286,3 +286,77 @@
   font-size: 14px;
   color: var(--text);
 }
+
+.correlation-grid-section {
+  margin: 24px 12px;
+}
+
+.correlation-grid-scroll {
+  overflow-x: auto;
+}
+
+.correlation-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 15px;
+}
+
+.correlation-grid th,
+.correlation-grid td {
+  padding: 8px 12px;
+}
+
+.grid-contest-label {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.grid-contest-label-horiz {
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.grid-contest-label-vert {
+  border-right: 1px solid var(--border);
+  padding: 12px 8px;
+  vertical-align: middle;
+}
+
+/* Rotate so the label reads bottom-to-top along the left edge */
+.grid-contest-label-vert > span {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+
+.grid-candidate-label {
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+thead .grid-candidate-label {
+  text-align: right;
+  vertical-align: bottom;
+  border-bottom: 2px solid var(--border);
+}
+
+tbody .grid-candidate-label {
+  text-align: left;
+  white-space: nowrap;
+  border-right: 2px solid var(--border);
+}
+
+.grid-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-h);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  /* Shade by share of the largest cell, so strong correlations stand out */
+  background: color-mix(
+    in srgb,
+    var(--accent) calc(var(--intensity, 0) * 35%),
+    transparent
+  );
+}

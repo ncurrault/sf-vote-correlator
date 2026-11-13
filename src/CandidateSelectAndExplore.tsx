@@ -144,7 +144,7 @@ export function CandidateSelectAndExplore({
     for (const [contestsStr, voteTallies] of Object.entries(
       electionJson.correlationsResult,
     )) {
-      const entryContests: ContestId[] = JSON.parse(contestsStr).map((x) =>
+      const entryContests: ContestId[] = JSON.parse(contestsStr).map((x: string) =>
         parseInt(x, 10),
       );
       if (
@@ -158,7 +158,7 @@ export function CandidateSelectAndExplore({
       const vertIdx = entryContests.indexOf(vertContest);
 
       for (const [voteStr, tally] of Object.entries(voteTallies)) {
-        const vote: CandidateId[] = JSON.parse(voteStr).map((x) =>
+        const vote: CandidateId[] = JSON.parse(voteStr).map((x: string | null) =>
           x ? parseInt(x, 10) : UNDERVOTE_SENTINEL,
         );
         const horizVote = vote[horizIdx];
@@ -236,53 +236,99 @@ export function CandidateSelectAndExplore({
           );
         })}
       </section>
-      {twoContestGrid && (
-        <section>
-          <h2>Correlations between selected candidates:</h2>
-          {electionJson.contestDetails[twoContestGrid.vertContest].name}
-          <table>
-            <tr>
-              <th />
-              <th
-                colSpan={
-                  selectedCandidatesGrouped[twoContestGrid.horizContest].length
-                }
-              >
-                {electionJson.contestDetails[twoContestGrid.horizContest].name}
-              </th>
-            </tr>
-            <tr>
-              <th />
-              {[
-                ...selectedCandidatesGrouped[twoContestGrid.horizContest],
-                UNDERVOTE_SENTINEL,
-              ].map((candidate: CandidateId) => (
-                <th>{getCandidateName(electionJson, candidate)}</th>
-              ))}
-            </tr>
-            {[
-              ...selectedCandidatesGrouped[twoContestGrid.vertContest],
-              UNDERVOTE_SENTINEL,
-            ].map((vertCandidate: CandidateId) => (
-              <tr>
-                <th>{getCandidateName(electionJson, vertCandidate)}</th>
-                {[
-                  ...selectedCandidatesGrouped[twoContestGrid.horizContest],
-                  UNDERVOTE_SENTINEL,
-                ].map((horizCandidate: CandidateId) => (
-                  <td>
-                    {(
-                      (twoContestGrid.gridData[horizCandidate] ?? {})[
-                        vertCandidate
-                      ] ?? 0
-                    ).toLocaleString()}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </table>
-        </section>
-      )}
+      {twoContestGrid &&
+        (() => {
+          const horizCandidates = [
+            ...selectedCandidatesGrouped[twoContestGrid.horizContest],
+            UNDERVOTE_SENTINEL,
+          ];
+          const vertCandidates = [
+            ...selectedCandidatesGrouped[twoContestGrid.vertContest],
+            UNDERVOTE_SENTINEL,
+          ];
+          const getTally = (horiz: CandidateId, vert: CandidateId) =>
+            (twoContestGrid.gridData[horiz] ?? {})[vert] ?? 0;
+          const maxTally = Math.max(
+            1,
+            ...horizCandidates.flatMap((h) =>
+              vertCandidates.map((v) => getTally(h, v)),
+            ),
+          );
+          return (
+            <section className="correlation-grid-section">
+              <h2>Correlations between selected candidates</h2>
+              <div className="correlation-grid-scroll">
+                <table className="correlation-grid">
+                  <thead>
+                    <tr>
+                      <th colSpan={2} rowSpan={2} className="grid-corner" />
+                      <th
+                        colSpan={horizCandidates.length}
+                        className="grid-contest-label grid-contest-label-horiz"
+                      >
+                        {
+                          electionJson.contestDetails[
+                            twoContestGrid.horizContest
+                          ].name
+                        }
+                      </th>
+                    </tr>
+                    <tr>
+                      {horizCandidates.map((candidate) => (
+                        <th
+                          key={candidate}
+                          scope="col"
+                          className="grid-candidate-label"
+                        >
+                          {getCandidateName(electionJson, candidate)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vertCandidates.map((vertCandidate, rowIdx) => (
+                      <tr key={vertCandidate}>
+                        {rowIdx === 0 && (
+                          <th
+                            rowSpan={vertCandidates.length}
+                            className="grid-contest-label grid-contest-label-vert"
+                          >
+                            <span>
+                              {
+                                electionJson.contestDetails[
+                                  twoContestGrid.vertContest
+                                ].name
+                              }
+                            </span>
+                          </th>
+                        )}
+                        <th scope="row" className="grid-candidate-label">
+                          {getCandidateName(electionJson, vertCandidate)}
+                        </th>
+                        {horizCandidates.map((horizCandidate) => {
+                          const tally = getTally(horizCandidate, vertCandidate);
+                          return (
+                            <td
+                              key={horizCandidate}
+                              className="grid-cell"
+                              style={
+                                {
+                                  "--intensity": tally / maxTally,
+                                } as React.CSSProperties
+                              }
+                            >
+                              {tally.toLocaleString()}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          );
+        })()}
       {!twoContestGrid && selectedCandidates.length > 0 && (
         <section className="results-display">
           <h2>
